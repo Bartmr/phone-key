@@ -8,7 +8,7 @@ Computers, specially belonging to IT professionals, run a lot of sofware from ma
 
 - Code is organized by an hierarchy of features, concerns and UI sections.
 - Do not create generic directories like `utils`, `helpers`, etc.
-- Use the `tree` command in the terminal to inspect the project's file structure. Invoke: `tree --gitignore -a -F [path]`
+- Use the `tree` command in the terminal to inspect the file structure. Invoke: `tree --gitignore -a -F [path]`
     - `--gitignore`: respect `.gitignore` so ignored files are omitted.
     - `-a`: include hidden files.
     - `-F`: append `/` to directories and `*` to executables for clarity.
