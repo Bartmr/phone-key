@@ -1,3 +1,9 @@
 {
-    
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@tsconfig/node24": "^24.0.4",
+        "typescript": "^6.0.3"
+    }
 }
