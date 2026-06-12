@@ -1,0 +1,1 @@
+const DEVICE_ADDRESS = process.env.DEVICE_ADDRESS

@@ -4,6 +4,9 @@
     },
     "devDependencies": {
         "@tsconfig/node24": "^24.0.4",
+        "@types/node": "^24.13.2",
         "typescript": "^6.0.3"
+    },
+    "dependencies": {
     }
 }
