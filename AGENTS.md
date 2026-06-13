@@ -1,8 +1,10 @@
 This repository contains Phone Key.
 
-Phone Key is a mobile app that allows you to use your phone as an hardware key (e.g. Yubikeys)
+Phone Key is a mobile app that allows you to use your phone as an hardware key (e.g. Yubikeys).
 
-Computers, specially belonging to IT professionals, run a lot of sofware from many sources, with thousands of dependencies from many authors. This means that computers are prone to silently be running malware that came from a supply-chain attack. The objective of this app is to move all critical keys and authentication actions to the mobile phone, since mobile operative systems are inherently more secure, and apps are isolated. There is less chance for an info-stealer to steal your keys if they are stored in the app's data. Also, hardware keys are expensive, more prone to being lost or break, and keys can't be transfered.
+**Why?**: Your computer, specially if you are in tech, runs a lot of sofware from many sources, with thousands of dependencies from many authors. If a single software author is compromised, your computer might be silently running malware that came from a supply-chain attack, and this malware can steal your sessions, keys and credentials in your computer. The objective of this app is to move all critical keys and authentication to your mobile phone, since mobile operative systems are inherently more secure, and apps are isolated. There is less chance for an info-stealer in your phone to steal your keys if they are stored in another app's data. Also, hardware keys are expensive, more prone to being lost or break, and keys can't be transfered.
+
+For now, we it will just support storing and using SSH and GPG keys, through Bluetooth.
 
 ## Shared conventions
 
