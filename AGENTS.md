@@ -8,7 +8,7 @@ For now, we it will just support storing and using SSH and GPG keys, through Blu
 
 ## Shared conventions
 
-- Code is organized by an hierarchy of features, concerns and UI sections.
+- Files in each project are organized as a hierarchy of features, concerns and UI sections.
 - Do not create generic directories like `utils`, `helpers`, etc.
 - Use the `tree` command in the terminal to inspect the file structure. Invoke: `tree --gitignore -a -F [path]`
     - `--gitignore`: respect `.gitignore` so ignored files are omitted.
