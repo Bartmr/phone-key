@@ -1,4 +1,4 @@
-This repository contains Phone Key.
+This repository is a monorepo containing all the projects that make Phone Key.
 
 Phone Key is a mobile app that allows you to use your phone as an hardware key (e.g. Yubikeys).
 
