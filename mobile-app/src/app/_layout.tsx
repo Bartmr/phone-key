@@ -1,9 +1,10 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DefaultTheme, ThemeProvider } from 'expo-router';
 import { useColorScheme } from 'react-native';
 import { Stack } from 'expo-router';
 import { 
   MD3DarkTheme,
   MD3LightTheme,
+  MD3Theme,
   PaperProvider,
   useTheme
 } from "react-native-paper";
@@ -21,38 +22,38 @@ function AppPaperProvider(props: { children: ReactNode }) {
     /*
     https://callstack.github.io/react-native-paper/docs/guides/theming#creating-dynamic-theme-colors
     */
-    const paperTheme = useMemo((): typeof MD3LightTheme => {
-    const baseTheme = themeFromSourceColor(argbFromHex("#4A95EB"));
-    
-    const md3Theme = scheme === "dark" ? MD3DarkTheme : MD3LightTheme;
-    
-    const baseThemeScheme =
-      scheme === "dark" ? baseTheme.schemes.dark : baseTheme.schemes.light;
-    
-    return {
-      ...md3Theme,
-      colors: {
-        ...md3Theme.colors,
-        primary: hexFromArgb(baseThemeScheme.primary),
-        onPrimary: hexFromArgb(baseThemeScheme.onPrimary),
-        primaryContainer: hexFromArgb(baseThemeScheme.primaryContainer),
-        onPrimaryContainer: hexFromArgb(baseThemeScheme.onPrimaryContainer),
-        //
-        secondary: hexFromArgb(baseThemeScheme.secondary),
-        onSecondary: hexFromArgb(baseThemeScheme.onSecondary),
-        secondaryContainer: hexFromArgb(baseThemeScheme.secondaryContainer),
-        onSecondaryContainer: hexFromArgb(baseThemeScheme.onSecondaryContainer),
-        //
-        tertiary: hexFromArgb(baseThemeScheme.tertiary),
-        onTertiary: hexFromArgb(baseThemeScheme.onTertiary),
-        tertiaryContainer: hexFromArgb(baseThemeScheme.tertiaryContainer),
-        onTertiaryContainer: hexFromArgb(baseThemeScheme.onTertiaryContainer),
-        //
-        surfaceVariant: hexFromArgb(baseThemeScheme.surfaceVariant),
-        onSurfaceVariant: hexFromArgb(baseThemeScheme.onSurfaceVariant),
-        //
-      },
-    };
+    const paperTheme = useMemo((): MD3Theme => {
+      const baseTheme = themeFromSourceColor(argbFromHex("#4A95EB"));
+      
+      const md3Theme = scheme === "dark" ? MD3DarkTheme : MD3LightTheme;
+      
+      const baseThemeScheme =
+        scheme === "dark" ? baseTheme.schemes.dark : baseTheme.schemes.light;
+      
+      return {
+        ...md3Theme,
+        colors: {
+          ...md3Theme.colors,
+          primary: hexFromArgb(baseThemeScheme.primary),
+          onPrimary: hexFromArgb(baseThemeScheme.onPrimary),
+          primaryContainer: hexFromArgb(baseThemeScheme.primaryContainer),
+          onPrimaryContainer: hexFromArgb(baseThemeScheme.onPrimaryContainer),
+          //
+          secondary: hexFromArgb(baseThemeScheme.secondary),
+          onSecondary: hexFromArgb(baseThemeScheme.onSecondary),
+          secondaryContainer: hexFromArgb(baseThemeScheme.secondaryContainer),
+          onSecondaryContainer: hexFromArgb(baseThemeScheme.onSecondaryContainer),
+          //
+          tertiary: hexFromArgb(baseThemeScheme.tertiary),
+          onTertiary: hexFromArgb(baseThemeScheme.onTertiary),
+          tertiaryContainer: hexFromArgb(baseThemeScheme.tertiaryContainer),
+          onTertiaryContainer: hexFromArgb(baseThemeScheme.onTertiaryContainer),
+          //
+          surfaceVariant: hexFromArgb(baseThemeScheme.surfaceVariant),
+          onSurfaceVariant: hexFromArgb(baseThemeScheme.onSurfaceVariant),
+          //
+        },
+      };
     }, [scheme]);
     
     return <PaperProvider theme={paperTheme}>{props.children}</PaperProvider>
