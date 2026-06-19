@@ -33,9 +33,9 @@ For now, we it will just support storing and using SSH and GPG keys, through Blu
 
 - Typescript
 - Expo
+- Expo Router
 - React Native
 - React Native Paper
-- Expo Router
 - react-native-ble-plx
 
 ### Directories
