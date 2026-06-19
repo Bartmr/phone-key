@@ -1,61 +1,78 @@
-import noble from "@abandonware/noble";
+import bleno from "@abandonware/bleno";
 
-const DEVICE_ADDRESS = process.env.DEVICE_ADDRESS;
+const MESSAGE = process.env.MESSAGE || process.argv[2] || "hello";
+const SERVICE_UUID = "12345678-1234-5678-1234-56789abcdef0";
+const CHARACTERISTIC_UUID = "abcdefab-1234-5678-1234-56789abcdef0";
 
-if (!DEVICE_ADDRESS) {
-  throw new Error("DEVICE_ADDRESS environment variable is not set");
-}
+class MessageCharacteristic extends bleno.Characteristic {
+  message: string;
 
-async function main(): Promise<void> {
-  if (noble._state !== "poweredOn") {
-    await new Promise<void>((resolve) => {
-      noble.once("stateChange", (state) => {
-        if (state === "poweredOn") resolve();
-      });
+  constructor(message: string) {
+    super({
+      uuid: CHARACTERISTIC_UUID,
+      properties: ["read"],
+      descriptors: [
+        new bleno.Descriptor({
+          uuid: "2901",
+          value: "Phone Key CLI message",
+        }),
+      ],
     });
+
+    this.message = message;
   }
 
-  console.log(`Scanning for device ${DEVICE_ADDRESS}...`);
-
-  await noble.startScanningAsync();
-
-  const peripheral = await new Promise<noble.Peripheral>((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      noble.stopScanningAsync();
-      reject(new Error("Device not found within 15 seconds"));
-    }, 15000);
-
-    noble.on("discover", (discovered: noble.Peripheral) => {
-      if (discovered.address.toUpperCase() === DEVICE_ADDRESS!.toUpperCase()) {
-        clearTimeout(timeout);
-        noble.stopScanningAsync();
-        resolve(discovered);
-      }
-    });
-  });
-
-  console.log(`Found device: ${peripheral.advertisement?.localName || peripheral.id}`);
-
-  await peripheral.connectAsync();
-  console.log("Connected");
-
-  const services = await peripheral.discoverServicesAsync();
-
-  for (const service of services) {
-    const characteristics = await service.discoverCharacteristicsAsync();
-    for (const characteristic of characteristics) {
-      if (characteristic.properties.includes("write") || characteristic.properties.includes("writeWithoutResponse")) {
-        const data = Buffer.from("hello", "utf-8");
-        await characteristic.writeAsync(data, false);
-        console.log(`Sent "hello" to characteristic ${characteristic.uuid} on service ${service.uuid}`);
-        await peripheral.disconnectAsync();
-        console.log("Disconnected");
-        process.exit(0);
-      }
+  
+  override onReadRequest(offset: number, callback: (result: number, data?: Buffer) => void) {
+    const data = Buffer.from(this.message, "utf-8");
+    if (offset > data.length) {
+      callback(bleno.Characteristic.RESULT_INVALID_OFFSET);
+      return;
     }
+    callback(bleno.Characteristic.RESULT_SUCCESS, data.slice(offset));
   }
-
-  throw new Error("No writable characteristic found on the device");
 }
 
-main();
+const messageCharacteristic = new MessageCharacteristic(MESSAGE);
+const messageService = new bleno.PrimaryService({
+  uuid: SERVICE_UUID,
+  characteristics: [messageCharacteristic],
+});
+
+bleno.on("stateChange", (state) => {
+  console.log("Bluetooth state:", state);
+  if (state === "poweredOn") {
+    bleno.startAdvertising("PhoneKeyCLI", [SERVICE_UUID], (error: any) => {
+      if (error) {
+        console.error("Advertising error:", error);
+        process.exit(1);
+      }
+      console.log("Advertising service for message delivery...");
+    });
+  } else {
+    bleno.stopAdvertising();
+  }
+});
+
+bleno.on("advertisingStart", (error) => {
+  if (error) {
+    console.error("Advertising failed:", error);
+    process.exit(1);
+  }
+  bleno.setServices([messageService], (setError) => {
+    if (setError) {
+      console.error("Failed to set BLE services:", setError);
+      process.exit(1);
+    }
+    console.log(`Message ready: "${MESSAGE}"`);
+    console.log("Phone Key CLI is now advertising. Open the mobile app and scan.");
+  });
+});
+
+bleno.on("accept", (clientAddress) => {
+  console.log(`Accepted connection from ${clientAddress}`);
+});
+
+bleno.on("disconnect", (clientAddress) => {
+  console.log(`Disconnected ${clientAddress}`);
+});
