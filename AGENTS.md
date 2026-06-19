@@ -11,11 +11,33 @@ For now, we it will just support storing and using SSH and GPG keys, through Blu
 - Files in each project are organized as a hierarchy of features, concerns and UI sections.
     - global, wider or more generic logic is placed higher in the directory tree, while local, narrower or more specific logic is placed deeper in the directory tree.
 - Do not create generic directories like `utils`, `helpers`, etc.
-- Use the `tree` command in the terminal to inspect the file structure. Invoke: `tree --gitignore -a -F [path]`
-    - `--gitignore`: respect `.gitignore` so ignored files are omitted.
-    - `-a`: include hidden files.
-    - `-F`: append `/` to directories and `*` to executables for clarity.
-    - Optionally add `-L [depth]` to limit depth in large trees.
 - there should be the least amount of moving parts (state, variables, asynchronous logic, effects, etc.) to achieve something.
 - do not create unnecessary functions and variables. if code is not reused, just inline it.
 - Avoid try/catch. Let the error bubble up, hit the global loggers and crash the thread.
+
+## `./cli`
+
+### Tech Stack
+
+Tech Stack:
+- @abandonware/noble
+
+### Directories
+
+- `scripts` has quick scripts for debugging that will not be included in the final release
+
+## `./mobile-app`
+
+### Tech Stack
+
+- Expo
+- React Native
+- React Native Paper
+- Expo Router
+- react-native-ble-plx
+
+### Directories
+
+- `src/ui` is for generic UI logic and components
+- `src/app` defines the routes in the app based on the directory and files tree, using Expo Router
+- `src/app-impl` contains the routes implementations, and their components
