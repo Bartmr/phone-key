@@ -29,7 +29,7 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 ### Tech Stack
 
 - Typescript
-- @abandonware/bleno
+- node-ble
 
 ### Directories
 
