@@ -10,15 +10,24 @@ export function BluetoothMessages() {
   const spacing = useSpacing();
   const [messages, setMessages] = useState<string[]>([]);
   const [serverRunning, setServerRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const subscription = MainModule.addListener('onMessageReceived', (event) => {
+    const messageSub = MainModule.addListener('onMessageReceived', (event) => {
       setMessages((prev) => [...prev, event.message]);
     });
-    return () => subscription.remove();
+    const errorSub = MainModule.addListener('onGattServerError', (event) => {
+      setError(event.reason);
+      setServerRunning(false);
+    });
+    return () => {
+      messageSub.remove();
+      errorSub.remove();
+    };
   }, []);
 
   const toggleServer = useCallback(async () => {
+    setError(null);
     if (serverRunning) {
       await MainModule.stopGattServer();
       setServerRunning(false);
@@ -44,6 +53,15 @@ export function BluetoothMessages() {
       >
         {serverRunning ? 'Stop GATT Server' : 'Start GATT Server'}
       </Button>
+
+      {error && (
+        <Text
+          variant="bodyMedium"
+          style={{ color: theme.colors.error, marginBottom: spacing.dp8 }}
+        >
+          {error}
+        </Text>
+      )}
 
       {messages.length === 0 ? (
         <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>

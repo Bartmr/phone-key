@@ -13,7 +13,10 @@ import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.ParcelUuid
+import android.util.Log
+import androidx.core.app.ActivityCompat
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.modules.ModuleDefinitionData
@@ -25,13 +28,31 @@ class MainModule : Module() {
 
   private var gattServer: BluetoothGattServer? = null
   private var advertiser: BluetoothLeAdvertiser? = null
+  private var activeAdvertiseCallback: AdvertiseCallback? = null
 
-  private val advertiseCallback = object : AdvertiseCallback() {}
+  private fun makeAdvertiseCallback() = object : AdvertiseCallback() {
+    override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+      Log.i("MainModule", "BLE advertising started successfully")
+    }
+
+    override fun onStartFailure(errorCode: Int) {
+      val reason = when (errorCode) {
+        AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE -> "Advertising data too large"
+        AdvertiseCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> "Too many advertisers active"
+        AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED -> "Advertising already started"
+        AdvertiseCallback.ADVERTISE_FAILED_INTERNAL_ERROR -> "Internal error"
+        AdvertiseCallback.ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> "BLE advertising not supported on this device"
+        else -> "Unknown error ($errorCode)"
+      }
+      Log.e("MainModule", "BLE advertising failed: $reason")
+      sendEvent("onGattServerError", mapOf("reason" to reason))
+    }
+  }
 
   override fun definition() = ModuleDefinition {
     Name("MainModule")
 
-    Events("onMessageReceived")
+    Events("onMessageReceived", "onGattServerError")
 
     AsyncFunction("startGattServer") {
       startGattServer()
@@ -42,12 +63,35 @@ class MainModule : Module() {
     }
   }
 
+  private fun hasBlePermissions(context: Context): Boolean {
+    return ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED &&
+      ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+  }
+
   @SuppressLint("MissingPermission")
   fun startGattServer() {
     val context: Context = appContext.reactContext ?: return
     val bluetoothManager: BluetoothManager =
       context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return
     val bluetoothAdapter: BluetoothAdapter = bluetoothManager.adapter ?: return
+
+    if (!hasBlePermissions(context)) {
+      Log.e("MainModule", "Missing BLUETOOTH_ADVERTISE or BLUETOOTH_CONNECT runtime permissions")
+      sendEvent("onGattServerError", mapOf("reason" to "Missing Bluetooth permissions"))
+      return
+    }
+
+    if (!bluetoothAdapter.isMultipleAdvertisementSupported) {
+      Log.e("MainModule", "This device does not support BLE advertising (peripheral mode)")
+      sendEvent("onGattServerError", mapOf("reason" to "BLE advertising not supported on this device"))
+      return
+    }
+
+    if (bluetoothAdapter.bluetoothLeAdvertiser == null) {
+      Log.e("MainModule", "bluetoothLeAdvertiser is null")
+      sendEvent("onGattServerError", mapOf("reason" to "BLE advertiser unavailable"))
+      return
+    }
 
     gattServer = bluetoothManager.openGattServer(context, object : BluetoothGattServerCallback() {
       override fun onCharacteristicWriteRequest(
@@ -87,16 +131,17 @@ class MainModule : Module() {
       .build()
 
     val data = AdvertiseData.Builder()
-      .setIncludeDeviceName(true)
       .addServiceUuid(ParcelUuid(serviceUuid))
       .build()
 
-    advertiser?.startAdvertising(settings, data, advertiseCallback)
+    activeAdvertiseCallback = makeAdvertiseCallback()
+    activeAdvertiseCallback?.let { cb -> advertiser?.startAdvertising(settings, data, cb) }
   }
 
   @SuppressLint("MissingPermission")
   fun stopGattServer() {
-    advertiser?.stopAdvertising(advertiseCallback)
+    activeAdvertiseCallback?.let { advertiser?.stopAdvertising(it) }
+    activeAdvertiseCallback = null
     advertiser = null
     gattServer?.close()
     gattServer = null
