@@ -1,0 +1,3 @@
+pyright==1.1.*
+python-dotenv==1.2.*
+bleak==3.0.*

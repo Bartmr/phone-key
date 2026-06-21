@@ -93,7 +93,46 @@ class MainModule : Module() {
       return
     }
 
+    val service = BluetoothGattService(serviceUuid, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+    val characteristic = BluetoothGattCharacteristic(
+      characteristicUuid,
+      BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
+      BluetoothGattCharacteristic.PERMISSION_WRITE
+    )
+    service.addCharacteristic(characteristic)
+
     gattServer = bluetoothManager.openGattServer(context, object : BluetoothGattServerCallback() {
+      override fun onConnectionStateChange(device: android.bluetooth.BluetoothDevice?, status: Int, newState: Int) {
+        if (newState == BluetoothGatt.STATE_CONNECTED) {
+          Log.i("MainModule", "Device connected: ${device?.address}")
+        } else if (newState == BluetoothGatt.STATE_DISCONNECTED) {
+          Log.i("MainModule", "Device disconnected: ${device?.address}")
+        }
+      }
+
+      override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
+        if (status == BluetoothGatt.GATT_SUCCESS) {
+          Log.i("MainModule", "GATT service added successfully, starting advertising")
+
+          advertiser = bluetoothAdapter.bluetoothLeAdvertiser
+
+          val settings = AdvertiseSettings.Builder()
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+            .setConnectable(true)
+            .build()
+
+          val data = AdvertiseData.Builder()
+            .addServiceUuid(ParcelUuid(serviceUuid))
+            .build()
+
+          activeAdvertiseCallback = makeAdvertiseCallback()
+          activeAdvertiseCallback?.let { cb -> advertiser?.startAdvertising(settings, data, cb) }
+        } else {
+          Log.e("MainModule", "Failed to add GATT service, status: $status")
+          sendEvent("onGattServerError", mapOf("reason" to "Failed to add GATT service ($status)"))
+        }
+      }
+
       override fun onCharacteristicWriteRequest(
         device: android.bluetooth.BluetoothDevice?,
         requestId: Int,
@@ -114,28 +153,11 @@ class MainModule : Module() {
       }
     })
 
-    val service = BluetoothGattService(serviceUuid, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-    val characteristic = BluetoothGattCharacteristic(
-      characteristicUuid,
-      BluetoothGattCharacteristic.PROPERTY_WRITE,
-      BluetoothGattCharacteristic.PERMISSION_WRITE
-    )
-    service.addCharacteristic(characteristic)
-    gattServer?.addService(service)
-
-    advertiser = bluetoothAdapter.bluetoothLeAdvertiser
-
-    val settings = AdvertiseSettings.Builder()
-      .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-      .setConnectable(true)
-      .build()
-
-    val data = AdvertiseData.Builder()
-      .addServiceUuid(ParcelUuid(serviceUuid))
-      .build()
-
-    activeAdvertiseCallback = makeAdvertiseCallback()
-    activeAdvertiseCallback?.let { cb -> advertiser?.startAdvertising(settings, data, cb) }
+    val added = gattServer?.addService(service) ?: false
+    if (!added) {
+      Log.e("MainModule", "addService returned false")
+      sendEvent("onGattServerError", mapOf("reason" to "addService returned false"))
+    }
   }
 
   @SuppressLint("MissingPermission")
