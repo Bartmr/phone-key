@@ -22,8 +22,8 @@ import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.modules.ModuleDefinitionData
 import java.util.UUID
 
-class MainModule : Module() {
+class BluetoothModule : Module() {
   override fun definition() = ModuleDefinition {
-    Name("MainModule")
+    Name("BluetoothModule")
   }
 }

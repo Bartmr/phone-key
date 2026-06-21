@@ -1,6 +1,6 @@
 {
   "platforms": ["android"],
   "android": {
-    "modules": ["expo.modules.main.MainModule"]
+    "modules": ["expo.modules.main.BluetoothModule"]
   }
 }

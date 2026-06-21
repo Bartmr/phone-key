@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
 
-import MainModule from '@/modules/main/src/MainModule';
+import BluetoothModule from '@/modules/main/src/BluetoothModule';
 import { useSpacing } from '@/ui/use-spacing';
 
 export function BluetoothMessages() {
