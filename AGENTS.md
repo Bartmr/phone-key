@@ -33,7 +33,7 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 
 ### Directories
 
-- `scripts` has quick scripts for debugging that will not be included in the final release.
+- `development` has quick scripts for debugging that will not be included in the final release.
 - `src` contains the source code to be shipped.
 
 ## `./mobile-app`
