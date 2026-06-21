@@ -4,11 +4,16 @@ import { Button, Text, useTheme } from 'react-native-paper';
 
 import { useSpacing } from '@/ui/use-spacing';
 import { BluetoothMessages } from './bluetooth-messages';
+
+/*
+  Related to modules/main/android/src/main/AndroidManifest.xml
+*/
 const BLUETOOTH_PERMISSIONS = [
       PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
       PermissionsAndroid.PERMISSIONS.BLUETOOTH_ADVERTISE,
       PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-    ]
+]
+
 export function IndexImpl() {
   const theme = useTheme();
   const spacing = useSpacing();
