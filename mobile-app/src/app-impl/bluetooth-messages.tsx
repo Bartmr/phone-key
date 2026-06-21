@@ -13,13 +13,24 @@ export function BluetoothMessages() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO
+    const messageSub = BluetoothModule.addListener("onStringReceived", (event) => {
+      setMessages((prev) => [...prev, event.value]);
+    });
+
+    return () => {
+      messageSub.remove();
+    };
   }, []);
 
   const toggleServer = useCallback(async () => {
     setError(null);
-   
-    // TODO
+    if (serverRunning) {
+      await BluetoothModule.stopGattServer();
+      setServerRunning(false);
+    } else {
+      await BluetoothModule.startGattServer();
+      setServerRunning(true);
+    }
   }, [serverRunning]);
 
   return (
