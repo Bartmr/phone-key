@@ -31,8 +31,8 @@ class BluetoothModule : Module() {
   private val advertiseCallback = object : AdvertiseCallback() {}
 
   companion object {
-    val SERVICE_UUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
-    val CHARACTERISTIC_UUID = UUID.fromString("6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
+    val SERVICE_UUID = UUID.fromString("b29c86a2-ba7c-4593-810f-de579bfc054e")
+    val CHARACTERISTIC_UUID = UUID.fromString("e32d074c-7f47-4de0-8cdf-fcf79874311c")
   }
 
   override fun definition() = ModuleDefinition {

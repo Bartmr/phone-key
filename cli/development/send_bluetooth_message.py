@@ -8,7 +8,7 @@ import os
 
 DEVICE_ADDRESS = os.environ["DEVICE_ADDRESS"]
 
-CHARACTERISTIC_UUID = "6E400003-B5A3-F393-E0A9-E50E24DCCA9E" 
+CHARACTERISTIC_UUID = "e32d074c-7f47-4de0-8cdf-fcf79874311c" 
 
 async def main():
     print(f"Connecting to {DEVICE_ADDRESS}...")
