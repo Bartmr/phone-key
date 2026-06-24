@@ -18,13 +18,12 @@ import android.os.ParcelUuid
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 
 class BluetoothModule : Module() {
   companion object {
-    val SERVICE_UUID = UUID.fromString("b29c86a2-ba7c-4593-810f-de579bfc054e")
-    val CHARACTERISTIC_UUID = UUID.fromString("e32d074c-7f47-4de0-8cdf-fcf79874311c")
-    val CCC_DESCRIPTOR_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+    val SERVICE_UUID: UUID = UUID.fromString("b29c86a2-ba7c-4593-810f-de579bfc054e")
+    val CHARACTERISTIC_UUID: UUID = UUID.fromString("e32d074c-7f47-4de0-8cdf-fcf79874311c")
+    val CCC_DESCRIPTOR_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
   }
 
   override fun definition() = ModuleDefinition {
@@ -54,8 +53,8 @@ class BluetoothModule : Module() {
   private var gattServer: BluetoothGattServer? = null
   private var advertiser: BluetoothLeAdvertiser? = null
   private var characteristic: BluetoothGattCharacteristic? = null
-  private val connectedDevices = ConcurrentHashMap.newKeySet<BluetoothDevice>()
-  private val preparedWriteBuffers = ConcurrentHashMap<BluetoothDevice, MutableList<Pair<Int, ByteArray>>>()
+
+  private var connection: BluetoothGATTServerConnection? = null
 
   private val advertiseCallback = object : AdvertiseCallback() {}
 
@@ -66,17 +65,30 @@ class BluetoothModule : Module() {
       throw IllegalStateException("Bluetooth is not enabled")
     }
 
-    connectedDevices.clear()
-
-    gattServer = bluetoothManager.openGattServer(context, object : BluetoothGattServerCallback() {
+    val gattServer = bluetoothManager.openGattServer(context, object : BluetoothGattServerCallback() {
       override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
+        val gattServer = gattServer ?: throw IllegalStateException("GATT server is not running")
+
         when (newState) {
-          BluetoothGatt.STATE_CONNECTED -> connectedDevices.add(device)
+          BluetoothGatt.STATE_CONNECTED -> {
+            // Reject new connections if busy
+            if (connection != null) {
+              gattServer.cancelConnection(device)
+              return
+            }
+
+            connection = BluetoothGATTServerConnection().also { it.connectedDevice = device }
+          }
           BluetoothGatt.STATE_DISCONNECTED -> {
-            connectedDevices.remove(device)
-            preparedWriteBuffers.remove(device)
+            connection = null
           }
         }
+      }
+
+      override fun onMtuChanged(device: BluetoothDevice, mtu: Int) {
+        val connection = connection ?: throw IllegalStateException("GATT server is not running")
+
+        connection.connectedDeviceMtu = mtu
       }
 
       override fun onCharacteristicWriteRequest(
@@ -88,30 +100,38 @@ class BluetoothModule : Module() {
         offset: Int,
         value: ByteArray
       ) {
-        if (characteristic.uuid != CHARACTERISTIC_UUID) return
+        val gattServer = gattServer ?: throw IllegalStateException("GATT server is not running")
+        val connection = connection ?: throw IllegalStateException("GATT server is not running")
 
-        if (preparedWrite) {
-          preparedWriteBuffers
-            .getOrPut(device) { mutableListOf() }
-            .add(Pair(offset, value))
+        if (characteristic.uuid != CHARACTERISTIC_UUID) {
           if (responseNeeded) {
-            gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED, 0, null)
           }
           return
         }
+        
+        if (preparedWrite) {
+          connection.preparedWriteChunks.add(Pair(offset, value))
+          if (responseNeeded) {
+            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+          }
+        } else {
+          sendEvent("onDataReceived", mapOf("data" to value))
 
-        sendEvent("onDataReceived", mapOf("value" to value))
-
-        if (responseNeeded) {
-          gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+          if (responseNeeded) {
+            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+          }
         }
       }
 
       override fun onExecuteWrite(device: BluetoothDevice, requestId: Int, execute: Boolean) {
-        val chunks = preparedWriteBuffers.remove(device) ?: return
-        if (!execute || chunks.isEmpty()) return
+        val conn = connection ?: throw IllegalStateException("GATT server is not running")
 
-        chunks.sortBy { it.first }
+        if (!execute || conn.preparedWriteChunks.isEmpty()) return
+
+        val chunks = conn.preparedWriteChunks.sortedBy { it.first }
+        conn.preparedWriteChunks.clear()
+
         val totalSize = chunks.sumOf { it.second.size }
         val assembled = ByteArray(totalSize)
         var pos = 0
@@ -119,7 +139,47 @@ class BluetoothModule : Module() {
           System.arraycopy(chunk, 0, assembled, pos, chunk.size)
           pos += chunk.size
         }
-        sendEvent("onDataReceived", mapOf("value" to assembled))
+        sendEvent("onDataReceived", mapOf("data" to assembled))
+      }
+
+      override fun onCharacteristicReadRequest(
+        device: BluetoothDevice,
+        requestId: Int,
+        offset: Int,
+        characteristic: BluetoothGattCharacteristic
+      ) {
+        val gattServer = gattServer ?: throw IllegalStateException("GATT server is not running")
+        val conn = connection ?: throw IllegalStateException("GATT server is not running")
+
+        if (characteristic.uuid != CHARACTERISTIC_UUID) {
+          gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED, 0, null)
+          return
+        }
+
+        val data = conn.readData
+        if (data == null || data.isEmpty()) {
+          gattServer.sendResponse(
+            device, requestId, BluetoothGatt.GATT_INVALID_OFFSET, 0, null
+          )
+          return
+        }
+
+        if (offset >= data.size) {
+          gattServer.sendResponse(
+            device, requestId, BluetoothGatt.GATT_INVALID_OFFSET, 0, null
+          )
+          return
+        }
+
+        val chunkSize = conn.connectedDeviceMtu - 1
+
+        gattServer.sendResponse(
+          device,
+          requestId,
+          BluetoothGatt.GATT_SUCCESS,
+          offset,
+          data.copyOfRange(offset, minOf(data.size, offset + chunkSize))
+        )
       }
     })
 
@@ -162,28 +222,26 @@ class BluetoothModule : Module() {
 
     advertiser?.startAdvertising(settings, data, scanResponse, advertiseCallback)
     this.advertiser = advertiser
-  }
-
-  private fun setReadData(data: ByteArray) {
-    characteristic?.setValue(data)
-    notifyConnectedDevices()
+    this.gattServer = gattServer
   }
 
   @SuppressLint("MissingPermission")
-  private fun notifyConnectedDevices() {
-    val server = gattServer ?: return
-    val chr = characteristic ?: return
-    for (device in connectedDevices) {
-      server.notifyCharacteristicChanged(device, chr, false)
-    }
+  private fun setReadData(data: ByteArray) {
+    val gattServer = gattServer ?: throw IllegalStateException("GATT server is not running")
+    val characteristic = characteristic ?: throw IllegalStateException("Characteristic is not initialized")
+    val conn = connection ?: throw IllegalStateException("No device connected")
+    val device = conn.connectedDevice ?: throw IllegalStateException("No device connected")
+
+    conn.readData = data
+
+    gattServer.notifyCharacteristicChanged(device, characteristic, true)
   }
 
   @SuppressLint("MissingPermission")
   private fun stopGattServer() {
     advertiser?.stopAdvertising(advertiseCallback)
     advertiser = null
-    connectedDevices.clear()
-    preparedWriteBuffers.clear()
+    connection = null
     gattServer?.close()
     gattServer = null
     characteristic = null

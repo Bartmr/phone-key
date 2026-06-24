@@ -1,3 +1,3 @@
 export type BluetoothModuleEvents = {
-  onDataReceived(value: { value: Uint8Array }): void;
+  onDataReceived(event: { data: Uint8Array }): void;
 }
