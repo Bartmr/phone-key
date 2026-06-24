@@ -105,7 +105,7 @@ class BluetoothModule : Module() {
 
         if (characteristic.uuid != CHARACTERISTIC_UUID) {
           if (responseNeeded) {
-            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED, 0, null)
+            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED, offset, null)
           }
           return
         }
@@ -113,13 +113,13 @@ class BluetoothModule : Module() {
         if (preparedWrite) {
           connection.preparedWriteChunks.add(Pair(offset, value))
           if (responseNeeded) {
-            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, null)
           }
         } else {
           sendEvent("onDataReceived", mapOf("data" to value))
 
           if (responseNeeded) {
-            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, null)
           }
         }
       }
@@ -152,21 +152,21 @@ class BluetoothModule : Module() {
         val conn = connection ?: throw IllegalStateException("GATT server is not running")
 
         if (characteristic.uuid != CHARACTERISTIC_UUID) {
-          gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED, 0, null)
+          gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED, offset, null)
           return
         }
 
         val data = conn.readData
         if (data == null || data.isEmpty()) {
           gattServer.sendResponse(
-            device, requestId, BluetoothGatt.GATT_INVALID_OFFSET, 0, null
+            device, requestId, BluetoothGatt.GATT_INVALID_OFFSET, offset, null
           )
           return
         }
 
         if (offset >= data.size) {
           gattServer.sendResponse(
-            device, requestId, BluetoothGatt.GATT_INVALID_OFFSET, 0, null
+            device, requestId, BluetoothGatt.GATT_INVALID_OFFSET, offset, null
           )
           return
         }
