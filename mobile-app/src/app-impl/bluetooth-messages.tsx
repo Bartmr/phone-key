@@ -70,7 +70,7 @@ export function BluetoothMessages() {
     for (let i = 0; i < repeats; i++) {
       payload.set(chunk, i * chunk.length);
     }
-    await BluetoothModule.setReadData(payload);
+    await BluetoothModule.pushToReadData(payload);
   }, []);
 
   return (

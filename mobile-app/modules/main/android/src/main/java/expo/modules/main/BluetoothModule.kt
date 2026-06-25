@@ -39,8 +39,8 @@ class BluetoothModule : Module() {
       stopGattServer()
     }
 
-    AsyncFunction("setReadData") { data: ByteArray ->
-      setReadData(data)
+    AsyncFunction("pushToReadData") { data: ByteArray ->
+      pushToReadData(data)
     }
   }
 
@@ -156,6 +156,16 @@ class BluetoothModule : Module() {
           return
         }
 
+        if (offset == 0) {
+          val nextData = conn.readQueue.poll()
+          if (nextData == null) {
+            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, offset, null)
+            return
+          }
+
+          conn.readData = nextData
+        }
+
         val data = conn.readData
         if (data == null || data.isEmpty()) {
           gattServer.sendResponse(
@@ -172,14 +182,23 @@ class BluetoothModule : Module() {
         }
 
         val chunkSize = conn.connectedDeviceMtu - 1
+        val end = minOf(data.size, offset + chunkSize)
 
         gattServer.sendResponse(
           device,
           requestId,
           BluetoothGatt.GATT_SUCCESS,
           offset,
-          data.copyOfRange(offset, minOf(data.size, offset + chunkSize))
+          data.copyOfRange(offset, end)
         )
+
+        if (end >= data.size) {
+          conn.readData = null
+
+          if (conn.readQueue.isNotEmpty()) {
+            gattServer.notifyCharacteristicChanged(device, characteristic, true)
+          }
+        }
       }
     })
 
@@ -227,15 +246,17 @@ class BluetoothModule : Module() {
   }
 
   @SuppressLint("MissingPermission")
-  private fun setReadData(data: ByteArray) {
+  private fun pushToReadData(data: ByteArray) {
     val gattServer = gattServer ?: throw IllegalStateException("GATT server is not running")
     val characteristic = characteristic ?: throw IllegalStateException("Characteristic is not initialized")
     val conn = connection ?: throw IllegalStateException("No device connected")
     val device = conn.connectedDevice ?: throw IllegalStateException("No device connected")
 
-    conn.readData = data
-
-    gattServer.notifyCharacteristicChanged(device, characteristic, true)
+    conn.readQueue.add(data)
+    
+    if (conn.readData == null) {
+      gattServer.notifyCharacteristicChanged(device, characteristic, true)
+    }
   }
 
   @SuppressLint("MissingPermission")
