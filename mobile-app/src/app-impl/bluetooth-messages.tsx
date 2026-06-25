@@ -30,7 +30,7 @@ export function BluetoothMessages() {
 
   useEffect(() => {
     const sub = BluetoothModule.addListener('onDataReceived', (event) => {
-      const blob = new Uint8Array(event.value);
+      const blob = event.data;
       const id = nextId.current++;
       setMessages((prev) => [
         ...prev,
