@@ -9,11 +9,15 @@ import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
+import android.util.Log
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import no.nordicsemi.android.ble.observer.ServerObserver
 
 class BluetoothModule : Module() {
+  companion object {
+    private const val TAG = "BluetoothModule"
+  }
   override fun definition() = ModuleDefinition {
     Name("BluetoothModule")
 
@@ -42,7 +46,15 @@ class BluetoothModule : Module() {
   private var bleManager: AppBleManager? = null
   private var advertiser: BluetoothLeAdvertiser? = null
 
-  private val advertiseCallback = object : AdvertiseCallback() {}
+  private val advertiseCallback = object : AdvertiseCallback() {
+    override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+      Log.i(TAG, "GATT server advertise started successfully")
+    }
+
+    override fun onStartFailure(errorCode: Int) {
+      Log.e(TAG, "GATT server advertise failed: errorCode=$errorCode")
+    }
+  }
 
   @SuppressLint("MissingPermission")
   private fun startGattServer() {
@@ -53,7 +65,25 @@ class BluetoothModule : Module() {
 
     val serverManager = AppServerManager(context).also { sm ->
       sm.setServerObserver(object : ServerObserver {
-        override fun onServerReady() {}
+        override fun onServerReady() {
+          val advertiser = adapter.bluetoothLeAdvertiser
+          val settings = AdvertiseSettings.Builder()
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+            .setConnectable(true)
+            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+            .build()
+
+          val data = AdvertiseData.Builder()
+            .setIncludeDeviceName(true)
+            .build()
+
+          val scanResponse = AdvertiseData.Builder()
+            .addServiceUuid(ParcelUuid(AppServerManager.SERVICE_UUID))
+            .build()
+
+          advertiser.startAdvertising(settings, data, scanResponse, advertiseCallback)
+          this@BluetoothModule.advertiser = advertiser
+        }
 
         override fun onDeviceConnectedToServer(device: BluetoothDevice) {
           // Reject new connections if busy
@@ -83,30 +113,12 @@ class BluetoothModule : Module() {
 
     serverManager.open()
 
-    val advertiser = adapter.bluetoothLeAdvertiser
-    val settings = AdvertiseSettings.Builder()
-      .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-      .setConnectable(true)
-      .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-      .build()
-
-    val data = AdvertiseData.Builder()
-      .setIncludeDeviceName(true)
-      .build()
-
-    val scanResponse = AdvertiseData.Builder()
-      .addServiceUuid(ParcelUuid(AppServerManager.SERVICE_UUID))
-      .build()
-
-    advertiser.startAdvertising(settings, data, scanResponse, advertiseCallback)
-
     this.serverManager = serverManager
-    this.advertiser = advertiser
   }
 
   @SuppressLint("MissingPermission")
   private fun enqueueDataToRead(data: ByteArray) {
-    val bleManager = bleManager
+    val bleManager = this.bleManager
       ?: throw IllegalStateException("No device connected")
 
     bleManager.enqueueDataToRead(data)

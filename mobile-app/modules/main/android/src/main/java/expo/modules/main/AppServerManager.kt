@@ -15,15 +15,19 @@ class AppServerManager(context: Context) : BleServerManager(context) {
   }
 
   override fun initializeServer(): List<BluetoothGattService> {
-    val characteristic = characteristic(
-      CHARACTERISTIC_UUID,
-      BluetoothGattCharacteristic.PROPERTY_READ or
-        BluetoothGattCharacteristic.PROPERTY_WRITE or
-        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-      BluetoothGattCharacteristic.PERMISSION_READ or
-        BluetoothGattCharacteristic.PERMISSION_WRITE
+    return listOf(
+      service(
+        SERVICE_UUID,
+        characteristic(
+          CHARACTERISTIC_UUID,
+          BluetoothGattCharacteristic.PROPERTY_READ or
+            BluetoothGattCharacteristic.PROPERTY_WRITE or
+            BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+          BluetoothGattCharacteristic.PERMISSION_READ or
+            BluetoothGattCharacteristic.PERMISSION_WRITE
+        )
+      )
     )
-    return listOf(service(SERVICE_UUID, characteristic))
   }
 
   fun rejectConnection(device: BluetoothDevice) {
