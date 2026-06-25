@@ -64,13 +64,9 @@ export function BluetoothMessages() {
 
   const handleSendLargeResponse = useCallback(async () => {
     setError(null);
-    const chunk = new TextEncoder().encode('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n');
-    const repeats = 100;
-    const payload = new Uint8Array(chunk.length * repeats);
-    for (let i = 0; i < repeats; i++) {
-      payload.set(chunk, i * chunk.length);
-    }
-    await BluetoothModule.pushToReadData(payload);
+    const payload = new TextEncoder().encode('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n');
+    
+    await BluetoothModule.enqueueDataToRead(payload);
   }, []);
 
   return (

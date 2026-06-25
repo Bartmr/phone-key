@@ -23,6 +23,8 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 - do not create unnecessary functions, constants and variables. if code is not reused, just inline it.
 - Avoid try/catch. Let the error bubble up, hit the global loggers and crash the thread.
 - do not type values with `any`. Either validate the value at runtime with something like Zod or Pydantic, or type it as `unknown` (or `object` in Python).
+- avoid naming things after the app's name. prefer naming them with `app`
+    - example: `PhoneKeyBleManager` should be `AppBleManager`
 
 ## `./cli`
 

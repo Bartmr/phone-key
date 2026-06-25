@@ -16,3 +16,7 @@ android {
     abortOnError false
   }
 }
+
+dependencies {
+  implementation 'no.nordicsemi.android:ble:2.11.0'
+}
