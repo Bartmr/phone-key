@@ -221,6 +221,7 @@ class BluetoothModule : Module() {
       .build()
 
     advertiser?.startAdvertising(settings, data, scanResponse, advertiseCallback)
+    this.characteristic = characteristic
     this.advertiser = advertiser
     this.gattServer = gattServer
   }
