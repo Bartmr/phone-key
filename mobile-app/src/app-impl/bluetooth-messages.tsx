@@ -62,9 +62,12 @@ export function BluetoothMessages() {
 
 
 
-  const handleSendLargeResponse = useCallback(async () => {
+  const sendData = useCallback(async () => {
     setError(null);
-    const payload = new TextEncoder().encode('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n');
+    // Generate a ~1KB (1024 bytes) repeating pattern
+    const chunk = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\n';
+    const repetitions = Math.ceil(4000 / chunk.length);
+    const payload = new TextEncoder().encode(chunk.repeat(repetitions));
     
     await BluetoothModule.enqueueDataToRead(payload);
   }, []);
@@ -88,8 +91,8 @@ export function BluetoothMessages() {
 
       {serverRunning && (
         <View style={{ flexDirection: 'row', gap: spacing.dp8, marginBottom: spacing.dp8 }}>
-          <Button mode="outlined" onPress={handleSendLargeResponse}>
-            Send large (~4 KB)
+          <Button mode="outlined" onPress={sendData}>
+            Send large
           </Button>
         </View>
       )}

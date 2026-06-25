@@ -21,17 +21,14 @@ async def main():
 
         print("Connected successfully!")
 
-        response_ready = asyncio.Event()
+        # Generate a large payload (e.g., 10 KB of repeating pattern)
+        chunk = b"The quick brown fox jumps over the lazy dog. "  # 45 bytes
+        payload_size = 10_240  # 10 KB
+        payload = (chunk * (payload_size // len(chunk) + 1))[:payload_size]
 
-        def notification_handler(_handle: int, data: bytearray):
-            response_ready.set()
-
-        await client.start_notify(CHARACTERISTIC_UUID, notification_handler)
-        print("Notifications enabled.")
-
-        payload = b"Hello Phone Key!"
-        print(f"Sending {len(payload)} bytes: {payload!r}")
+        print(f"Sending {len(payload)} bytes...")
         await client.write_gatt_char(CHARACTERISTIC_UUID, payload, response=True)
+        print("Done sending.")
 
 
 if __name__ == "__main__":
