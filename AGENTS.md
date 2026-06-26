@@ -26,7 +26,7 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 - avoid referencing the app's name in the code.
     - example: `PhoneKeyBleManager` should be `AppBleManager`
 
-## `./cli`
+## Project `./cli`
 
 ### Tech Stack
 
@@ -38,7 +38,7 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 - `development` has quick scripts for debugging that will not be included in the final release.
 - `src` contains the source code to be shipped.
 
-## `./mobile-app`
+## Project `./mobile-app`
 
 ### Tech Stack
 
