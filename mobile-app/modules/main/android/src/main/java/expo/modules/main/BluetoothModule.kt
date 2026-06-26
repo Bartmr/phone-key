@@ -63,56 +63,57 @@ class BluetoothModule : Module() {
       throw IllegalStateException("Bluetooth is not enabled")
     }
 
-    val serverManager = AppServerManager(context).also { sm ->
-      sm.setServerObserver(object : ServerObserver {
-        override fun onServerReady() {
-          val advertiser = adapter.bluetoothLeAdvertiser
-          val settings = AdvertiseSettings.Builder()
-            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-            .setConnectable(true)
-            .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-            .build()
+    val serverManager = AppServerManager(context)
 
-          val data = AdvertiseData.Builder()
-            .setIncludeDeviceName(true)
-            .build()
+    serverManager.setServerObserver(object : ServerObserver {
+      override fun onServerReady() {
+        val advertiser = adapter.bluetoothLeAdvertiser
+        val settings = AdvertiseSettings.Builder()
+          .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+          .setConnectable(true)
+          .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
+          .build()
 
-          val scanResponse = AdvertiseData.Builder()
-            .addServiceUuid(ParcelUuid(AppServerManager.SERVICE_UUID))
-            .build()
+        val data = AdvertiseData.Builder()
+          .setIncludeDeviceName(false)
+          .setIncludeTxPowerLevel(false)
+          .addServiceUuid(ParcelUuid(AppServerManager.SERVICE_UUID))
+          .build()
 
-          advertiser.startAdvertising(settings, data, scanResponse, advertiseCallback)
-          this@BluetoothModule.advertiser = advertiser
+        val scanResponse = AdvertiseData.Builder()
+          .setIncludeDeviceName(true)
+          .build()
+
+        advertiser.startAdvertising(settings, data, scanResponse, advertiseCallback)
+        this@BluetoothModule.advertiser = advertiser
+      }
+
+      override fun onDeviceConnectedToServer(device: BluetoothDevice) {
+        // Reject new connections if busy
+        if (bleManager != null) {
+          serverManager.rejectConnection(device)
+          return
         }
 
-        override fun onDeviceConnectedToServer(device: BluetoothDevice) {
-          // Reject new connections if busy
-          if (bleManager != null) {
-            sm.rejectConnection(device)
-            return
-          }
+        val bleManager = AppBleManager(context)
 
-          val bleManager = AppBleManager(context).also { mgr ->
-            mgr.useServer(sm)
-            mgr.attachClientConnection(device)
+        bleManager.useServer(serverManager)
+        bleManager.attachClientConnection(device)
 
-            mgr.onWrite { _, data ->
-              sendEvent("onDataReceived", mapOf("data" to data))
-            }
-          }
-
-          this@BluetoothModule.bleManager = bleManager
+        bleManager.onWrite { _, data ->
+          sendEvent("onDataReceived", mapOf("data" to data))
         }
 
-        override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
-          bleManager?.close()
-          bleManager = null
-        }
-      })
-    }
+        this@BluetoothModule.bleManager = bleManager
+      }
+
+      override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
+        bleManager?.close()
+        bleManager = null
+      }
+    })
 
     serverManager.open()
-
     this.serverManager = serverManager
   }
 
@@ -128,9 +129,6 @@ class BluetoothModule : Module() {
   private fun stopGattServer() {
     advertiser?.stopAdvertising(advertiseCallback)
     advertiser = null
-
-    bleManager?.close()
-    bleManager = null
 
     serverManager?.close()
     serverManager = null

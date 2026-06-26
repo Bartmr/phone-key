@@ -5,6 +5,7 @@ load_dotenv()
 import asyncio
 from bleak import BleakClient
 import os
+import subprocess
 
 DEVICE_ADDRESS = os.environ["DEVICE_ADDRESS"]
 
@@ -20,6 +21,14 @@ async def main():
             return
 
         print("Connected successfully!")
+
+        print("Starting discovery...")
+        
+        subprocess.run(
+            ["busctl", "call", "org.bluez", "/org/bluez/hci0", "org.bluez.Adapter1", "StartDiscovery"],
+            check=True,
+        )
+        print("Discovery started.")
 
         # Generate a large payload (e.g., 10 KB of repeating pattern)
         chunk = b"The quick brown fox jumps over the lazy dog. "  # 45 bytes

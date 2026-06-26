@@ -48,6 +48,7 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 - Expo Modules
 - React Native
 - React Native Paper
+- Nordic Semiconductor's Android BLE Library
 
 ### Directories
 

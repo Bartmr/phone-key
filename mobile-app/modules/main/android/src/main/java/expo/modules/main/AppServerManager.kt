@@ -30,13 +30,11 @@ class AppServerManager(context: Context) : BleServerManager(context) {
     )
   }
 
-  fun rejectConnection(device: BluetoothDevice) {
-    cancelConnection(device)
+  override fun log(priority: Int, message: String) {
+    Log.println(priority, "AppBleServerManager", message);
   }
 
-  override fun getMinLogPriority(): Int = Log.INFO
-
-  override fun log(priority: Int, message: String) {
-    Log.println(priority, "AppServerManager", message)
+  fun rejectConnection(device: BluetoothDevice) {
+    cancelConnection(device)
   }
 }
