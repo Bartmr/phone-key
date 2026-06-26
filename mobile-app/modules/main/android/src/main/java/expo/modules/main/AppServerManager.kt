@@ -10,8 +10,8 @@ import java.util.UUID
 
 class AppServerManager(context: Context) : BleServerManager(context) {
   companion object {
-    val SERVICE_UUID: UUID = UUID.fromString("b29c86a2-ba7c-4593-810f-de579bfc054e")
-    val CHARACTERISTIC_UUID: UUID = UUID.fromString("e32d074c-7f47-4de0-8cdf-fcf79874311c")
+    val SERVICE_UUID: UUID = UUID.fromString("a667f940-6a50-49ac-9b75-2b9639564972")
+    val CHARACTERISTIC_UUID: UUID = UUID.fromString("69924d24-8e47-4d43-9e86-dde30201a474")
   }
 
   override fun initializeServer(): List<BluetoothGattService> {

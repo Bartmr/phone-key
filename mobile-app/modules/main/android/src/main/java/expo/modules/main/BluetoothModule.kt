@@ -45,16 +45,7 @@ class BluetoothModule : Module() {
   private var serverManager: AppServerManager? = null
   private var bleManager: AppBleManager? = null
   private var advertiser: BluetoothLeAdvertiser? = null
-
-  private val advertiseCallback = object : AdvertiseCallback() {
-    override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
-      Log.i(TAG, "GATT server advertise started successfully")
-    }
-
-    override fun onStartFailure(errorCode: Int) {
-      Log.e(TAG, "GATT server advertise failed: errorCode=$errorCode")
-    }
-  }
+  private var currentAdvertiseCallback: AdvertiseCallback? = null
 
   @SuppressLint("MissingPermission")
   private fun startGattServer() {
@@ -68,24 +59,34 @@ class BluetoothModule : Module() {
     serverManager.setServerObserver(object : ServerObserver {
       override fun onServerReady() {
         val advertiser = adapter.bluetoothLeAdvertiser
+          ?: throw IllegalStateException("BLE advertising is not supported on this device")
+
         val settings = AdvertiseSettings.Builder()
           .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
           .setConnectable(true)
-          .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
           .build()
 
+
         val data = AdvertiseData.Builder()
-          .setIncludeDeviceName(false)
-          .setIncludeTxPowerLevel(false)
           .addServiceUuid(ParcelUuid(AppServerManager.SERVICE_UUID))
           .build()
 
         val scanResponse = AdvertiseData.Builder()
-          .setIncludeDeviceName(true)
           .build()
 
-        advertiser.startAdvertising(settings, data, scanResponse, advertiseCallback)
+        val callback = object : AdvertiseCallback() {
+          override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+            Log.i(TAG, "GATT server advertise started successfully")
+          }
+
+          override fun onStartFailure(errorCode: Int) {
+            Log.e(TAG, "GATT server advertise failed: errorCode=$errorCode")
+          }
+        }
+
+        advertiser.startAdvertising(settings, data, scanResponse, callback)
         this@BluetoothModule.advertiser = advertiser
+        this@BluetoothModule.currentAdvertiseCallback = callback
       }
 
       override fun onDeviceConnectedToServer(device: BluetoothDevice) {
@@ -95,14 +96,15 @@ class BluetoothModule : Module() {
           return
         }
 
-        val bleManager = AppBleManager(context)
-
-        bleManager.useServer(serverManager)
-        bleManager.attachClientConnection(device)
-
-        bleManager.onWrite { _, data ->
-          sendEvent("onDataReceived", mapOf("data" to data))
+        val bleManager = AppBleManager(context).apply {
+          useServer(serverManager)
+          attachClientConnection(device)
+          onWrite { _, data ->
+            sendEvent("onDataReceived", mapOf("data" to data))
+          }
         }
+
+
 
         this@BluetoothModule.bleManager = bleManager
       }
@@ -127,7 +129,11 @@ class BluetoothModule : Module() {
 
   @SuppressLint("MissingPermission")
   private fun stopGattServer() {
-    advertiser?.stopAdvertising(advertiseCallback)
+    val callback = currentAdvertiseCallback
+    if (callback != null) {
+      advertiser?.stopAdvertising(callback)
+    }
+    currentAdvertiseCallback = null
     advertiser = null
 
     serverManager?.close()
