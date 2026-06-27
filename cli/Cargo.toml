@@ -5,7 +5,7 @@ edition = "2021"
 
 [[bin]]
 name = "send-bluetooth-message"
-path = "src/main.rs"
+path = "development/send-bluetooth-message.rs"
 
 [dependencies]
 bluer = { version = "0.17", features = ["full"] }
