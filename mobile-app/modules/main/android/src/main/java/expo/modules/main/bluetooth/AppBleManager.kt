@@ -1,13 +1,10 @@
-package expo.modules.main
+package expo.modules.main.bluetooth
 
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattServer
 import android.content.Context
-import android.util.Log
 import no.nordicsemi.android.ble.BleManager
-import no.nordicsemi.android.ble.data.DataProvider
 
 class AppBleManager(context: Context) : BleManager(context) {
   var serverCharacteristic: BluetoothGattCharacteristic? = null

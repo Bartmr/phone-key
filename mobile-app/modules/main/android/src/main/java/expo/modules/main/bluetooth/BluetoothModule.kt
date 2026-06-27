@@ -1,4 +1,4 @@
-package expo.modules.main
+package expo.modules.main.bluetooth
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice

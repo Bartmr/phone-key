@@ -1,4 +1,4 @@
-package expo.modules.main
+package expo.modules.main.bluetooth
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGattCharacteristic
