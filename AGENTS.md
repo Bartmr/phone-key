@@ -16,7 +16,6 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 
 ## Shared conventions
 
-- In each project, the file structure is oriented towards features and UI hierarchy. a feature is anything needed to make the app work, from the product perspective.
 - Do not create generic directories like `utils`, `helpers`, etc.
 - there should be the least amount of moving parts (state, variables, asynchronous logic, effects, etc.) to achieve something.
 - do not create unnecessary functions, constants and variables. if code is not reused, just inline it.
