@@ -16,10 +16,7 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 
 ## Shared conventions
 
-> a **feature** is anything needed to make the app work, from the product perspective.
-
-- Files in each project are organized as a hierarchy of features and UI sections.
-    - global, wider or more generic logic is placed higher in the directory tree, while local, narrower or more specific logic is placed deeper in the directory tree.
+- In each project, the file structure is oriented towards features and UI hierarchy. a feature is anything needed to make the app work, from the product perspective.
 - Do not create generic directories like `utils`, `helpers`, etc.
 - there should be the least amount of moving parts (state, variables, asynchronous logic, effects, etc.) to achieve something.
 - do not create unnecessary functions, constants and variables. if code is not reused, just inline it.
@@ -39,9 +36,8 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 
 ### Directories
 
-- `src` contains the source code to be shipped.
-- `src/<feature>[/<feature>/...]` contains the logic for a feature and its nested features.
-- `development/<feature>[/<feature>/...]` has scripts for debugging a feature.
+- `src` contains the product to be shipped, organized by terminal command or by feature.
+- `development` has development and debugging scripts, organized by feature.
 
 ## Project `./mobile-app`
 
@@ -60,7 +56,7 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 
 - `src/ui` is for generic UI components, logic and design tokens, besides what is already included in React Native Paper.
 - `src/app` defines the routes in the app based on the directory tree, using Expo Router.
-- `src/app-impl` contains the routes implementations, and their components. The directory tree mirrors `src/app`. There is a preference for keeping most of the logic in `src/app-impl,` near the route that uses it, until it is generic and reused enough to be placed directly under `src`
+- `src/app-impl` contains the routes implementations, and their components. The directory tree mirrors `src/app`. There is a preference for keeping most of the logic in `src/app-impl,` near the route or component that uses it, until it is generic and reused enough to be placed directly under `src`
 - `modules/main` contains all of the app's native code as an Expo Module.
 - `mobile-app/modules/main/android` contains the Android project for the Expo Module.
 - `mobile-app/modules/main/src` contains the JS wrappers and types for the Expo Module.
