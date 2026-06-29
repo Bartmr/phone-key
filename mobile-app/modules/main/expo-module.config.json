@@ -2,7 +2,8 @@
   "platforms": ["android"],
   "android": {
     "modules": [
-      "expo.modules.main.bluetooth.BluetoothModule"
+      "expo.modules.main.bluetooth.BluetoothModule",
+      "expo.modules.main.sshkey.SshKeyModule"
     ]
   }
 }
