@@ -53,9 +53,9 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 
 ### Directories
 
-- `src/ui` is for generic UI components, logic and design tokens, besides what is already included in React Native Paper.
 - `src/app` defines the routes in the app based on the directory tree, using Expo Router.
 - `src/app-impl` contains the routes implementations, and their components. The directory tree mirrors `src/app`. There is a preference for keeping most of the logic in `src/app-impl,` near the route or component that uses it, until it is generic and reused enough to be placed directly under `src`
+- `src/ui` is for generic UI components, logic and design tokens, besides what is already included in React Native Paper.
 - `modules/main` contains all of the app's native code as an Expo Module.
 - `modules/main/android` contains the Android project for the Expo Module.
 - `modules/main/src` contains the JS wrappers and types for the Expo Module.
