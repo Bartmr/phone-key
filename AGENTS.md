@@ -35,8 +35,8 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 
 ### Directories
 
-- `src` contains the product to be shipped, organized by terminal command or by feature.
-- `development` has development and debugging scripts, grouped by topic.
+- `src` contains the logic to be shipped, organized by terminal command.
+- `development` has development and debugging scripts.
 
 ## Project `./mobile-app`
 
