@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import expo.modules.main.keystore.KeyStoreConstants
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.ByteArrayOutputStream
@@ -27,7 +28,6 @@ class SshKeyModule : Module() {
 
     private const val PRIVATE_KEY_FILE = "ssh_key_ed25519.enc"
     private const val PUBLIC_KEY_FILE = "ssh_key_ed25519.pub"
-    private const val KEYSTORE_ALIAS = "ssh_key_passphrase"
 
     private const val PBKDF2_ITERATIONS = 600_000
     private const val SALT_BYTES = 32
@@ -98,7 +98,7 @@ class SshKeyModule : Module() {
     val keyStore = KeyStore.getInstance("AndroidKeyStore")
     keyStore.load(null)
 
-    val privateKey = keyStore.getKey(KEYSTORE_ALIAS, null) as java.security.PrivateKey
+    val privateKey = keyStore.getKey(KeyStoreConstants.MAIN_KEYSTORE_ALIAS, null) as java.security.PrivateKey
 
     val cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
     cipher.init(Cipher.DECRYPT_MODE, privateKey)
@@ -194,7 +194,7 @@ class SshKeyModule : Module() {
     )
 
     val spec = KeyGenParameterSpec.Builder(
-      KEYSTORE_ALIAS,
+      KeyStoreConstants.MAIN_KEYSTORE_ALIAS,
       KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
     )
       .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
