@@ -12,19 +12,17 @@ The objective of Phone Key is to **move all critical keys and authentication to 
 
 Also, hardware keys (e.g. YubiKeys) are expensive, more prone to being lost or break, and keys can't be transfered.
 
-For now, it will just support storing and using SSH and GPG keys, through Bluetooth.
-
 ## Shared conventions
 
 - Do not create generic directories like `utils`, `helpers`, etc.
 - there should be the least amount of moving parts (state, variables, asynchronous logic, effects, etc.) to achieve something.
 - do not create unnecessary functions, constants and variables. if code is not reused, just inline it.
-- Avoid try/catch. Let the error bubble up, hit the global loggers and crash the thread.
+- Avoid try/catch. Let errors bubble up, hit the global error handlers, and crash the thread. Use return values for expected failure paths - not exceptions. Reserve exceptions only for truly unexpected conditions that the code cannot reasonably recover from.
 - do not type values with `any`. Either validate the value at runtime with something like Zod or Pydantic, or type it as `unknown` (or `object` in Python).
+- do not use unsafe type casts. Check the instance type, and throw an explicit error if the type does not match.
 - avoid referencing the app's name in the code.
     - example: `PhoneKeyBleManager` should be `AppBleManager`
-- Prefer explicit if/else statements to ternaries.
-- Prefer async/await to `.then()`
+- Avoid ternaries inside other ternaries.
 
 ## Project `./cli`
 
@@ -65,3 +63,4 @@ For now, it will just support storing and using SSH and GPG keys, through Blueto
 
 - Always use the design tokens from `useTheme` from React Native Paper.
 - Don't bother using `Stylesheet.create`. Inline the styles in the `style` prop.
+- Always prefer async/await to `.then()`. If needed, use IIFE.

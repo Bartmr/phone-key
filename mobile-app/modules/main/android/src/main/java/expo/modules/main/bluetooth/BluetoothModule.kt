@@ -23,15 +23,15 @@ class BluetoothModule : Module() {
 
     Events("onDataReceived")
 
-    AsyncFunction("startGattServer") {
+    Function("startGattServer") {
       startGattServer()
     }
 
-    AsyncFunction("stopGattServer") {
+    Function("stopGattServer") {
       stopGattServer()
     }
 
-    AsyncFunction("enqueueDataToRead") { data: ByteArray ->
+    Function("enqueueDataToRead") { data: ByteArray ->
       enqueueDataToRead(data)
     }
   }

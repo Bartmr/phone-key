@@ -1,7 +1,9 @@
 import { useSpacing } from "@/ui/use-spacing";
-import { ReactNode, useEffect, useState } from "react";
-import { PermissionsAndroid, View } from "react-native";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { AppState, PermissionsAndroid, View } from "react-native";
 import { Button, Text, useTheme } from "react-native-paper";
+
+import BluetoothModule from "@/modules/main/src/BluetoothModule";
 
 
 function PermissionsGate(props: { children: ReactNode }) {
@@ -49,6 +51,50 @@ function PermissionsGate(props: { children: ReactNode }) {
     }
 }
 
+function ServerGate(props: { children: ReactNode }) {
+    const [isStarted, setIsStarted] = useState(false);
+    const appStateRef = useRef(AppState.currentState);
+
+    useEffect(() => {
+        const sub = AppState.addEventListener("change", (nextAppState) => {
+            void (async () => {
+                if ((appStateRef.current === "inactive" || appStateRef.current === "background") && nextAppState === "active") {
+                    BluetoothModule.startGattServer();
+                    setIsStarted(true);
+                } else if (appStateRef.current === "active" && (nextAppState === "inactive" || nextAppState === "background")) {
+                    BluetoothModule.stopGattServer();
+                    setIsStarted(false);
+                }
+            })();
+
+            appStateRef.current = nextAppState;
+        });
+
+        return () => sub.remove();
+    }, []);
+
+    useEffect(() => {
+        void (async () => {
+            BluetoothModule.startGattServer();
+            setIsStarted(true);
+        })();
+
+        return () => {
+            BluetoothModule.stopGattServer();
+        };
+    }, []);
+
+    if (!isStarted) {
+        return null;
+    }
+
+    return <>{props.children}</>;
+}
+
 export function BluetoothGate(props: { children: ReactNode }) {
-    return <PermissionsGate>{props.children}</PermissionsGate>
+    return (
+        <PermissionsGate>
+            <ServerGate>{props.children}</ServerGate>
+        </PermissionsGate>
+    );
 }

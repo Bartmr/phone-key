@@ -3,9 +3,9 @@ import { NativeModule, requireNativeModule } from 'expo';
 import { BluetoothModuleEvents } from './Bluetooth.types';
 
 declare class BluetoothModule extends NativeModule<BluetoothModuleEvents> {
-  startGattServer(): Promise<void>;
-  stopGattServer(): Promise<void>;
-  enqueueDataToRead(data: Uint8Array): Promise<void>;
+  startGattServer(): void;
+  stopGattServer(): void;
+  enqueueDataToRead(data: Uint8Array): void;
 }
 
 export default requireNativeModule<BluetoothModule>('BluetoothModule');
