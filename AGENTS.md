@@ -1,6 +1,6 @@
 This repository is a monorepo containing all the projects that make Phone Key.
 
-Phone Key is a mobile app that allows you to use your phone's Trusted Execution Environment just like a hardware key (e.g. YubiKey). It communicates with your computer through Bluetooth.
+Phone Key is a mobile app that allows you to use your phone's hardware-backed security enclave (e.g. Trusted Execution Environment) just like a hardware key (e.g. YubiKey). It communicates with your computer through Bluetooth.
 
 ## Shared conventions
 
