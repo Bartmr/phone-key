@@ -21,9 +21,10 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 - rust
 - bluer
 
-### Directories
+### Files and directories
 
 - `src` contains the logic to be shipped, organized by binary, then sub-commands.
+- `src/config.ts` loads the user's config.
 - `development` has development and debugging scripts.
 
 ## Project `./mobile-app`
@@ -39,7 +40,7 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 - React Native Paper
 - Nordic Semiconductor's Android BLE Library
 
-### Directories
+### Files and directories
 
 - `src/app` defines the routes in the app based on the directory tree, using Expo Router.
 - `src/app-impl` contains the routes implementations, and their components. The directory tree mirrors `src/app`. There is a preference for keeping most of the logic in `src/app-impl,` near the route or component that uses it, until it is generic and reused enough to be placed directly under `src`

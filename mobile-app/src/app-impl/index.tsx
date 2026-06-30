@@ -1,10 +1,10 @@
 import { View } from 'react-native';
-import { useBluetoothCommandsHandler } from './bluetooth-commands-handler';
+import { useBluetoothMessagesHandler } from './bluetooth-messages-handler';
 import { Text } from 'react-native-paper';
 
 
 export function IndexImpl() {
-  const bluetoothHandler = useBluetoothCommandsHandler();
+  const bluetoothHandler = useBluetoothMessagesHandler();
 
   return (
     <View>

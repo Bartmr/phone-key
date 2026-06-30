@@ -69,7 +69,7 @@ export function BluetoothMessages() {
     const repetitions = Math.ceil(4000 / chunk.length);
     const payload = new TextEncoder().encode(chunk.repeat(repetitions));
     
-    await BluetoothModule.enqueueDataToRead(payload);
+    await BluetoothModule.sendToClient(payload);
   }, []);
 
   return (

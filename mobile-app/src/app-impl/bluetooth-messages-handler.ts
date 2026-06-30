@@ -13,18 +13,18 @@ type UIState = {
     error?: SshSignError
 }
 
-const IncomingCommandMessageSchema = z.union([
+const MessageSchema = z.union([
                 z.object({
-                    command: z.literal("sign"),
+                    type: z.literal("sign"),
                     data: z.string() // Base64
                 }),
                 z.object({
-                    command: z.literal("get-public-key")
+                    type: z.literal("get-public-key")
                 })
             ])
 
 
-export function useBluetoothCommandsHandler() {
+export function useBluetoothMessagesHandler() {
     const stateRef = useRef<State | null>(null)
     const [uiState, setUiState] = useState<UIState | null>(null);
 
@@ -33,12 +33,11 @@ export function useBluetoothCommandsHandler() {
         const subscription = BluetoothModule.addListener("onDataReceived", async (event) => {
             const decoder = new TextDecoder('utf-8');
             const eventDataString = decoder.decode(event.data);
-            const message = JSON.parse(eventDataString);
+            const rawMessage = JSON.parse(eventDataString);
+            const message = MessageSchema.parse(rawMessage);
 
-            const validatedMessage = IncomingCommandMessageSchema.parse(message);
-
-            if (validatedMessage.command === "sign") {
-                const dataBytes = Uint8Array.from(atob(validatedMessage.data), c => c.charCodeAt(0));
+            if (message.type === "sign") {
+                const dataBytes = Uint8Array.from(atob(message.data), c => c.charCodeAt(0));
                 const signed = await SshModule.sign(dataBytes);
 
                 if (signed.error) {
@@ -52,11 +51,11 @@ export function useBluetoothCommandsHandler() {
                     throw new Error();
                 }
 
-                BluetoothModule.enqueueDataToRead(signed.signature);
-            } else if (validatedMessage.command === "get-public-key") {
+                BluetoothModule.sendToClient(signed.signature);
+            } else if (message.type === "get-public-key") {
                 const publicKey = await SshModule.getPublicKey();
                 const encoder = new TextEncoder();
-                BluetoothModule.enqueueDataToRead(encoder.encode(publicKey));
+                BluetoothModule.sendToClient(encoder.encode(publicKey));
             }
         })
 

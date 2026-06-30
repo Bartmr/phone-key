@@ -31,8 +31,8 @@ class BluetoothModule : Module() {
       stopGattServer()
     }
 
-    Function("enqueueDataToRead") { data: ByteArray ->
-      enqueueDataToRead(data)
+    Function("sendToClient") { data: ByteArray ->
+      sendToClient(data)
     }
   }
 
@@ -118,11 +118,11 @@ class BluetoothModule : Module() {
   }
 
   @SuppressLint("MissingPermission")
-  private fun enqueueDataToRead(data: ByteArray) {
+  private fun sendToClient(data: ByteArray) {
     val bleManager = this.bleManager
       ?: throw IllegalStateException("No device connected")
 
-    bleManager.enqueueDataToRead(data)
+    bleManager.sendToClient(data)
   }
 
   @SuppressLint("MissingPermission")
