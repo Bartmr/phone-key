@@ -58,10 +58,18 @@ function ServerGate(props: { children: ReactNode }) {
     useEffect(() => {
         const sub = AppState.addEventListener("change", (nextAppState) => {
             void (async () => {
-                if ((appStateRef.current === "inactive" || appStateRef.current === "background") && nextAppState === "active") {
+                if (
+                    (
+                        appStateRef.current === "inactive"
+                        || appStateRef.current === "background"
+                    ) && nextAppState === "active"
+                ) {
                     BluetoothModule.startGattServer();
                     setIsStarted(true);
-                } else if (appStateRef.current === "active" && (nextAppState === "inactive" || nextAppState === "background")) {
+                } else if (
+                    appStateRef.current === "active"
+                    && (nextAppState === "inactive" || nextAppState === "background")
+                ) {
                     BluetoothModule.stopGattServer();
                     setIsStarted(false);
                 }

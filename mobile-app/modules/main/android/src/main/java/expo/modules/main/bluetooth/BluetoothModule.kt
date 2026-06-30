@@ -104,8 +104,6 @@ class BluetoothModule : Module() {
           }
         }
 
-
-
         this@BluetoothModule.bleManager = bleManager
       }
 
