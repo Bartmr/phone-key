@@ -22,7 +22,9 @@ class AppBleManager(context: Context) : BleManager(context) {
 
   fun sendToClient(data: ByteArray) {
     val ch = this.serverCharacteristic ?: throw IllegalStateException("Not connected")
-    ch.setValue(data)
+    setCharacteristicValue(ch,data)
+      .allowLongRead(true)
+      .enqueue()
     sendNotification(ch, ByteArray(0))
       .enqueue()
   }

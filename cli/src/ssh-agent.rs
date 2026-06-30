@@ -1,7 +1,10 @@
 use base64::Engine;
 use bluer::gatt::remote::{Characteristic, CharacteristicWriteRequest};
 use bluer::gatt::WriteOp;
-use futures::StreamExt;
+use futures::{Stream, StreamExt};
+use std::pin::Pin;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use ssh_agent_lib::agent::{listen, Session};
 use ssh_agent_lib::error::AgentError;
 use ssh_agent_lib::proto::{Identity, PublicCredential, SignRequest};
@@ -20,6 +23,7 @@ const SOCKET_PATH: &str = "/tmp/phone-key-agent.sock";
 #[derive(Clone)]
 struct PhoneKeySession {
     characteristic: Characteristic,
+    notifications: Arc<Mutex<Pin<Box<dyn Stream<Item = Vec<u8>> + Send>>>>,
 }
 
 impl PhoneKeySession {
@@ -64,17 +68,14 @@ impl PhoneKeySession {
         let characteristic =
             characteristic.expect("characteristic not found on device");
 
-        Ok(Self { characteristic })
+        let stream = Box::pin(characteristic.notify().await?)
+            as Pin<Box<dyn Stream<Item = Vec<u8>> + Send>>;
+        let notifications = Arc::new(Mutex::new(stream));
+
+        Ok(Self { characteristic, notifications })
     }
 
-    async fn send_message(&self, json: &str) -> Result<Vec<u8>, AgentError> {
-        let notifications = self
-            .characteristic
-            .notify()
-            .await
-            .map_err(AgentError::other)?;
-        tokio::pin!(notifications);
-
+    async fn send_message(&mut self, json: &str) -> Result<Vec<u8>, AgentError> {
         self.characteristic
             .write_ext(
                 json.as_bytes(),
@@ -90,7 +91,7 @@ impl PhoneKeySession {
         // Wait for the empty notification signal
         tokio::time::timeout(
             std::time::Duration::from_millis(5000),
-            notifications.next(),
+            self.notifications.lock().await.next(),
         )
         .await
         .map_err(|_| {
