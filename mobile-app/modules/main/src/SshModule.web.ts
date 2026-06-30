@@ -1,5 +1,4 @@
 import { NativeModule, registerWebModule } from 'expo';
-import type { SshPublicKeyInfo } from './SshModule.types';
 
 class SshModule extends NativeModule<{}> {
   async initializeKey(): Promise<void> {
@@ -10,7 +9,7 @@ class SshModule extends NativeModule<{}> {
     throw new Error('SshModule is not available on web');
   }
 
-  async getPublicKey(): Promise<SshPublicKeyInfo> {
+  async getPublicKey(): Promise<string> {
     throw new Error('SshModule is not available on web');
   }
 }

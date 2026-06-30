@@ -14,6 +14,8 @@ import {
   themeFromSourceColor,
 } from "@material/material-color-utilities";
 import { ReactNode, useMemo } from 'react';
+import { BluetoothGate } from '@/app-impl/bluetooth-gate';
+import { InitializeSshKey } from '@/app-impl/initialize-ssh-key';
 
 
 function AppPaperProvider(props: { children: ReactNode }) {
@@ -105,7 +107,11 @@ export default function Layout() {
   return (
     <AppPaperProvider>
       <ExpoRouterThemeProvider>
-        <Stack />
+        <InitializeSshKey>
+          <BluetoothGate>
+            <Stack />
+          </BluetoothGate>
+        </InitializeSshKey>
       </ExpoRouterThemeProvider>
     </AppPaperProvider>
   );

@@ -1,16 +1,6 @@
 This repository is a monorepo containing all the projects that make Phone Key.
 
-Phone Key is a mobile app that allows you to use your phone as an hardware key (e.g. Yubikeys).
-
-**Why?**
-
-**Computers are inherently unsafe**: they run a lot of sofware from many sources, with thousands of dependencies from many authors. Anything ran on the user space is assumed secure by the OS and can see everything stored on the user space, including keys and credentials. If a single author in the supply-chain is compromised, your computer might be silently running malware, and this malware can steal your sessions, keys and credentials in your computer.
-
-**Mobile phones are inherently secure**: every app in the user space is considered untrustworthy, and it's sandboxed. Apps cannot read one anothers data.
-
-The objective of Phone Key is to **move all critical keys and authentication to your mobile phone**, since mobile operative systems are secured and apps are isolated. There is less chance for an info-stealer in your phone to steal your keys if they are stored in another app's data.
-
-Also, hardware keys (e.g. YubiKeys) are expensive, more prone to being lost or break, and keys can't be transfered.
+Phone Key is a mobile app that allows you to use your phone's Trusted Execution Environment just like a hardware key (e.g. YubiKey). It communicates with your computer through Bluetooth.
 
 ## Shared conventions
 

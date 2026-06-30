@@ -1,9 +1,4 @@
-export interface SshPublicKeyInfo {
-  /** Uncompressed EC point: 0x04 || x (32 bytes) || y (32 bytes) — 65 bytes total */
-  raw: Uint8Array;
-  /** SSH authorized_keys format: "ecdsa-sha2-nistp256 <base64>" */
-  sshFormat: string;
-}
+
 
 export interface SshSignError {
   code: number;

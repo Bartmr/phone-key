@@ -1,6 +1,6 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
-import type { SshPublicKeyInfo, SshSignResult } from './SshModule.types';
+import type { SshSignResult } from './SshModule.types';
 
 declare class SshModule extends NativeModule<{}> {
   /**
@@ -19,9 +19,9 @@ declare class SshModule extends NativeModule<{}> {
   sign(data: Uint8Array): Promise<SshSignResult>;
 
   /**
-   * Returns the public key in raw uncompressed-point form and SSH authorized_keys format.
+   * Returns the public key in SSH authorized_keys format.
    */
-  getPublicKey(): Promise<SshPublicKeyInfo>;
+  getPublicKey(): Promise<string>;
 }
 
 export default requireNativeModule<SshModule>('SshModule');

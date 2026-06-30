@@ -94,22 +94,13 @@ class SshModule : Module() {
 
   // -----
 
-  private fun getPublicKey(): Map<String, Any> {
+  private fun getPublicKey(): String {
     val publicKey = loadKey().certificate.publicKey
     require(publicKey is ECPublicKey) {
       "Expected ECPublicKey, got ${publicKey::class.simpleName}"
     }
 
-    val raw = toRawPoint(publicKey)
-    val sshFormat = toSshFormat(publicKey)
-    return mapOf("raw" to raw, "sshFormat" to sshFormat)
-  }
-
-  private fun toRawPoint(publicKey: ECPublicKey): ByteArray {
-    val w = publicKey.w
-    val x = BigIntegers.asUnsignedByteArray(32, w.affineX)
-    val y = BigIntegers.asUnsignedByteArray(32, w.affineY)
-    return byteArrayOf(0x04) + x + y
+    return toSshFormat(publicKey)
   }
 
   private fun toSshFormat(publicKey: ECPublicKey): String {
@@ -150,7 +141,11 @@ class SshModule : Module() {
 
             authenticatedSignature.update(data)
             val derSignature = authenticatedSignature.sign()
-            continuation.resume(mapOf("signature" to derToRaw(derSignature)))
+            continuation.resume(
+              mapOf(
+                "signature" to derToRaw(derSignature)
+              )
+            )
           }
 
           override fun onAuthenticationError(
@@ -166,14 +161,15 @@ class SshModule : Module() {
               )
             )
           }
-
-
         }
       )
 
       val promptInfo = BiometricPrompt.PromptInfo.Builder()
-        .setTitle("SSH Signing")
-        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+        .setTitle("Sign with SSH key")
+        .setAllowedAuthenticators(
+          BiometricManager.Authenticators.BIOMETRIC_STRONG
+          or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        )
         .build()
 
       continuation.invokeOnCancellation {
