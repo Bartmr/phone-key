@@ -23,7 +23,7 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 ### Directories
 
-- `src` contains the logic to be shipped, organized by terminal command.
+- `src` contains the logic to be shipped, organized by binary, then sub-commands.
 - `development` has development and debugging scripts.
 
 ## Project `./mobile-app`
