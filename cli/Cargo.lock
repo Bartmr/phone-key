@@ -122,20 +122,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cli-rust"
-version = "0.1.0"
-dependencies = [
- "base64",
- "bluer",
- "futures",
- "serde",
- "serde_json",
- "ssh-agent-lib",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -761,6 +747,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88b39c9bfcfc231068454382784bb460aae594343fb030d46e9f50a645418412"
 dependencies = [
  "base64ct",
+]
+
+[[package]]
+name = "phone-key-cli"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "bluer",
+ "futures",
+ "serde",
+ "serde_json",
+ "ssh-agent-lib",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

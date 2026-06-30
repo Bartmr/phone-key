@@ -24,7 +24,8 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 ### Files and directories
 
 - `src` contains the logic to be shipped, organized by binary, then sub-commands.
-- `src/config.ts` loads the user's config.
+- `src/config.rs` loads the user's config.
+- `src/bluetooth.rs` manages the BLE connection to the mobile app: connects to a device, discovers the GATT service/characteristic, and provides `send_message` for request-response communication over Bluetooth.
 - `development` has development and debugging scripts.
 
 ## Project `./mobile-app`
