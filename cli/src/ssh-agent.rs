@@ -4,8 +4,7 @@ use ssh_agent_lib::error::AgentError;
 use ssh_agent_lib::proto::{Identity, PublicCredential, SignRequest};
 use ssh_agent_lib::ssh_key::{Algorithm, PublicKey, Signature};
 use tokio::net::UnixListener;
-mod bluetooth;
-mod config;
+use phone_key_cli::{bluetooth, config};
 
 const SOCKET_PATH: &str = "/tmp/phone-key-agent.sock";
 

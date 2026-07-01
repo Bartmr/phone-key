@@ -26,7 +26,7 @@ function PermissionsGate(props: { children: ReactNode }) {
 
         PermissionsAndroid.requestMultiple(BLUETOOTH_PERMISSIONS).then((result) => {
             setPermissionsGranted(
-            BLUETOOTH_PERMISSIONS.every((perm) => result[perm] === PermissionsAndroid.RESULTS.GRANTED),
+                BLUETOOTH_PERMISSIONS.every((perm) => result[perm] === PermissionsAndroid.RESULTS.GRANTED),
             );
         });
     };
@@ -35,7 +35,9 @@ function PermissionsGate(props: { children: ReactNode }) {
         requestPermissions();
     }, []);
 
-    if (permissionsRequested) {
+    if (permissionsGranted) {
+        return <>{props.children}</>
+    } else if (permissionsRequested) {
         return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.dp8 }}>
             <Text variant="bodyLarge" style={{ color: theme.colors.onBackground, textAlign: 'center' }}>
               Bluetooth permissions are required to encrypt and decrypt data.
@@ -44,8 +46,6 @@ function PermissionsGate(props: { children: ReactNode }) {
               Grant Permissions
             </Button>
           </View>
-    } else if (permissionsGranted) {
-        return <>{props.children}</>
     } else {
         return null;
     }

@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "send-bluetooth-message"
-path = "development/send-bluetooth-message.rs"
+name = "test-bluetooth"
+path = "development/test-bluetooth.rs"
 
 [[bin]]
 name = "ssh-agent"
