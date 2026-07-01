@@ -27,5 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         String::from_utf8_lossy(&response)
     );
 
+    conn.disconnect().await?;
+
     Ok(())
 }
