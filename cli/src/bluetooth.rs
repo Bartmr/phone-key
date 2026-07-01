@@ -1,5 +1,6 @@
 use bluer::gatt::remote::{Characteristic, CharacteristicWriteRequest};
 use bluer::gatt::WriteOp;
+use bluer::Device;
 use futures::{Stream, StreamExt};
 use std::pin::Pin;
 use std::str::FromStr;
@@ -10,8 +11,8 @@ use uuid::Uuid;
 const SERVICE_UUID: &str = "a667f940-6a50-49ac-9b75-2b9639564972";
 const CHARACTERISTIC_UUID: &str = "69924d24-8e47-4d43-9e86-dde30201a474";
 
-#[derive(Clone)]
 pub struct BluetoothConnection {
+    device: Device,
     characteristic: Characteristic,
     notifications: Arc<Mutex<Pin<Box<dyn Stream<Item = Vec<u8>> + Send>>>>,
 }
@@ -84,6 +85,7 @@ impl BluetoothConnection {
         let notifications = Arc::new(Mutex::new(notifications));
 
         Ok(Self {
+            device,
             characteristic,
             notifications,
         })
@@ -95,7 +97,7 @@ impl BluetoothConnection {
                 json.as_bytes(),
                 &CharacteristicWriteRequest {
                     offset: 0,
-                    op_type: WriteOp::Reliable,
+                    op_type: WriteOp::Request,
                     ..Default::default()
                 },
             )
@@ -116,5 +118,10 @@ impl BluetoothConnection {
         }
 
         Ok(response)
+    }
+
+    pub async fn disconnect(&self) -> Result<(), Error> {
+        self.device.disconnect().await?;
+        Ok(())
     }
 }
