@@ -29,16 +29,16 @@ class AppServerManager(context: Context) : BleServerManager(context) {
                   BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED_MITM,
           BluetoothGattDescriptor(
             CCCD_UUID,
-            BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED_MITM
-                    or BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED_MITM
-          )
-        )
-      )
+            BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED_MITM
+                    or BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED_MITM,
+          ),
+        ),
+      ),
     )
   }
 
   override fun log(priority: Int, message: String) {
-    Log.println(priority, "AppBleServerManager", message);
+    Log.println(priority, "AppBleServerManager", message)
   }
 
   fun rejectConnection(device: BluetoothDevice) {

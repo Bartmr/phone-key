@@ -1,6 +1,6 @@
 package com.bartmr.phonekey.ssh
 
-import android.app.Activity
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import androidx.biometric.BiometricManager
@@ -21,7 +21,19 @@ import java.security.interfaces.ECPublicKey
 import kotlin.coroutines.resume
 
 sealed class SignResult {
-    data class Success(val rawSignature: ByteArray) : SignResult()
+    data class Success(val rawSignature: ByteArray) : SignResult() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as Success
+            return rawSignature.contentEquals(other.rawSignature)
+        }
+
+        override fun hashCode(): Int {
+            return rawSignature.contentHashCode()
+        }
+    }
+
     data class Error(val code: Int, val message: String) : SignResult()
 }
 
@@ -40,24 +52,29 @@ object SshModule {
 
         val generator = KeyPairGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_EC,
-            "AndroidKeyStore"
+            "AndroidKeyStore",
         )
 
-        generator.initialize(
-            KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
-                KeyProperties.PURPOSE_SIGN
-            )
-                .setKeySize(256)
-                .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
-                .setUserAuthenticationRequired(true)
-                .setUserAuthenticationParameters(
-                    0,
-                    KeyProperties.AUTH_BIOMETRIC_STRONG
-                            or KeyProperties.AUTH_DEVICE_CREDENTIAL
-                )
-                .build()
+        val builder = KeyGenParameterSpec.Builder(
+            KEY_ALIAS,
+            KeyProperties.PURPOSE_SIGN,
         )
+            .setKeySize(256)
+            .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+            .setUserAuthenticationRequired(true)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            builder.setUserAuthenticationParameters(
+                0,
+                KeyProperties.AUTH_BIOMETRIC_STRONG
+                        or KeyProperties.AUTH_DEVICE_CREDENTIAL
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            builder.setUserAuthenticationValidityDurationSeconds(-1)
+        }
+
+        generator.initialize(builder.build())
 
         generator.generateKeyPair()
     }
@@ -101,7 +118,7 @@ object SshModule {
 
                     override fun onAuthenticationError(
                         errorCode: Int,
-                        errString: CharSequence
+                        errString: CharSequence,
                     ) {
                         continuation.resume(
                             SignResult.Error(errorCode, errString.toString())
