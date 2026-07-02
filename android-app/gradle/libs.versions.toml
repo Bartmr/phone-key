@@ -8,6 +8,7 @@ lifecycleRuntimeKtx = "2.6.1"
 activityCompose = "1.8.0"
 appcompat = "1.7.0"
 kotlin = "2.2.10"
+kotlinxSerializationJson = "1.8.0"
 composeBom = "2026.02.01"
 biometric = "1.1.0"
 nordicBle = "2.11.0"
@@ -32,8 +33,10 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 nordic-ble = { group = "no.nordicsemi.android", name = "ble", version.ref = "nordicBle" }
 bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 

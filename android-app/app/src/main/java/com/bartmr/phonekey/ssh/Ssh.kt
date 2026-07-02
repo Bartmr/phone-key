@@ -26,10 +26,8 @@ sealed class SignResult {
     data class Error(val code: Int, val message: String) : SignResult()
 }
 
-object SshModule {
-    private const val KEY_ALIAS = "ssh_key"
-
-    lateinit var activity: FragmentActivity
+class Ssh(private val activity: FragmentActivity) {
+    private val KEY_ALIAS = "ssh_key"
 
     fun initializeKey() {
         val keyStore = KeyStore.getInstance("AndroidKeyStore")

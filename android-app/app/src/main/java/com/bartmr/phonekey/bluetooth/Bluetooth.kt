@@ -13,7 +13,7 @@ import android.os.ParcelUuid
 import android.util.Log
 import no.nordicsemi.android.ble.observer.ServerObserver
 
-class BluetoothModule(private val context: Context) {
+class Bluetooth(private val context: Context) {
     private val bluetoothManager: BluetoothManager
         get() = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 
@@ -61,8 +61,8 @@ class BluetoothModule(private val context: Context) {
                 }
 
                 advertiser.startAdvertising(settings, data, scanResponse, callback)
-                this@BluetoothModule.advertiser = advertiser
-                this@BluetoothModule.currentAdvertiseCallback = callback
+                this@Bluetooth.advertiser = advertiser
+                this@Bluetooth.currentAdvertiseCallback = callback
             }
 
             override fun onDeviceConnectedToServer(device: BluetoothDevice) {
@@ -84,7 +84,7 @@ class BluetoothModule(private val context: Context) {
                     }
                 }
 
-                this@BluetoothModule.bleManager = bleManager
+                this@Bluetooth.bleManager = bleManager
             }
 
             override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
@@ -97,7 +97,6 @@ class BluetoothModule(private val context: Context) {
         this.serverManager = serverManager
     }
 
-    @SuppressLint("MissingPermission")
     fun sendToClient(data: ByteArray) {
         val bleManager = this.bleManager
             ?: throw IllegalStateException("No device connected")
@@ -119,6 +118,6 @@ class BluetoothModule(private val context: Context) {
     }
 
     companion object {
-        private const val TAG = "BluetoothModule"
+        private const val TAG = "Bluetooth"
     }
 }
