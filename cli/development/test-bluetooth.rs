@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let large_payload = "X".repeat(2000);
     let message = serde_json::json!({
-        "command": "echo",
+        "type": "echo",
         "payload": large_payload
     })
     .to_string();
