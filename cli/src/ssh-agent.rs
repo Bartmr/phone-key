@@ -3,14 +3,16 @@ use ssh_agent_lib::agent::{listen, Session};
 use ssh_agent_lib::error::AgentError;
 use ssh_agent_lib::proto::{Identity, PublicCredential, SignRequest};
 use ssh_agent_lib::ssh_key::{Algorithm, PublicKey, Signature};
+use std::sync::Arc;
 use tokio::net::UnixListener;
+use tokio::sync::Mutex;
 use phone_key_cli::{bluetooth, config};
 
 const SOCKET_PATH: &str = "/tmp/phone-key-agent.sock";
 
 #[derive(Clone)]
 struct AppSession {
-    connection: bluetooth::BluetoothConnection,
+    connection: Arc<Mutex<bluetooth::BluetoothConnection>>,
 }
 
 impl AppSession {
@@ -20,11 +22,13 @@ impl AppSession {
             .as_deref()
             .expect("device_address not set in ~/.phone-key.json");
         let connection = bluetooth::BluetoothConnection::connect(device_address).await?;
-        Ok(Self { connection })
+        Ok(Self {
+            connection: Arc::new(Mutex::new(connection)),
+        })
     }
 
-    async fn send_message(&mut self, json: &str) -> Result<Vec<u8>, AgentError> {
-        self.connection.send_message(json).await.map_err(|e| {
+    async fn send_message(&self, json: &str) -> Result<Vec<u8>, AgentError> {
+        self.connection.lock().await.send_message(json).await.map_err(|e| {
             AgentError::other(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
         })
     }
