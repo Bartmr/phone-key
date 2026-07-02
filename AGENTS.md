@@ -8,10 +8,9 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 - there should be the least amount of moving parts (state, variables, asynchronous logic, effects, etc.) to achieve something.
 - do not create unnecessary functions, constants and variables. if code is not reused, just inline it.
 - Avoid try/catch. Let errors bubble up, hit the global error handlers, and crash the thread. Use return values for expected failure paths - not exceptions. Reserve exceptions only for truly unexpected conditions that the code cannot reasonably recover from.
-- do not type values with `any`. Either validate the value at runtime with something like Zod or Pydantic, or type it as `unknown` (or `object` in Python).
-- do not use unsafe type casts. Check the instance type, and throw an explicit error if the type does not match.
+- do not type values with `any` or use unsafe type casts. Either validate the value at runtime with something like Zod, check the instance type and throw an explicit error, or type it as `unknown`.
 - avoid referencing the app's name in the code.
-    - example: `PhoneKeyBleManager` should be `AppBleManager`
+    - example: `PhoneKey` should be `App`
 - Avoid ternaries inside other ternaries.
 
 ## Project `./cli`
@@ -23,7 +22,7 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 ### Files and directories
 
-- `src` contains the logic to be shipped, organized by binary, then sub-commands.
+- `src` contains the logic to be shipped, organized by binary and features.
 - `src/config.rs` loads the user's config.
 - `src/bluetooth.rs` manages the BLE connection to the mobile app: connects to a device, discovers the GATT service/characteristic, and provides `send_message` for request-response communication over Bluetooth.
 - `development` has development and debugging scripts.
