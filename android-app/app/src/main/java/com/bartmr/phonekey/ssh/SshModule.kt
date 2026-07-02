@@ -1,4 +1,4 @@
-package expo.modules.main.ssh
+package com.bartmr.phonekey.ssh
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties

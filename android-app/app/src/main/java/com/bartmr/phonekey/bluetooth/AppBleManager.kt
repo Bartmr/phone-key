@@ -1,4 +1,4 @@
-package expo.modules.main.bluetooth
+package com.bartmr.phonekey.bluetooth
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGattCharacteristic
