@@ -2,6 +2,7 @@ package expo.modules.main.bluetooth
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothDevice.BOND_BONDED
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
@@ -95,6 +96,12 @@ class BluetoothModule : Module() {
           serverManager.rejectConnection(device)
           return
         }
+
+        if (device.bondState != BOND_BONDED) {
+          serverManager.rejectConnection(device)
+          return
+        }
+
 
         val bleManager = AppBleManager(context).apply {
           useServer(serverManager)

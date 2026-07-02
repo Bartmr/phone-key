@@ -97,7 +97,7 @@ impl BluetoothConnection {
                 json.as_bytes(),
                 &CharacteristicWriteRequest {
                     offset: 0,
-                    op_type: WriteOp::Request,
+                    op_type: WriteOp::Reliable,
                     ..Default::default()
                 },
             )
