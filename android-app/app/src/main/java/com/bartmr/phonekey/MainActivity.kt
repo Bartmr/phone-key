@@ -37,7 +37,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bartmr.phonekey.bluetooth.Bluetooth
 import com.bartmr.phonekey.ssh.Ssh
 import com.bartmr.phonekey.ssh.SignResult
-import com.bartmr.phonekey.ui.theme.AppTheme
+import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
 
         enableEdgeToEdge()
         setContent {
-            AppTheme {
+            PhoneKeyTheme {
                 MainScreen(bluetooth, ssh)
             }
         }
