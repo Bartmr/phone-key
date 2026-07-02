@@ -4,7 +4,6 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattServer
 import android.content.Context
-import android.util.Log
 import no.nordicsemi.android.ble.BleManager
 
 class AppBleManager(context: Context) : BleManager(context) {
@@ -22,9 +21,11 @@ class AppBleManager(context: Context) : BleManager(context) {
 
   fun sendToClient(data: ByteArray) {
     val ch = this.serverCharacteristic ?: throw IllegalStateException("Not connected")
-    setCharacteristicValue(ch,data)
-      .allowLongRead(true)
+
+    sendNotification(ch, data)
+      .split()
       .enqueue()
+
     sendNotification(ch, ByteArray(0))
       .enqueue()
   }

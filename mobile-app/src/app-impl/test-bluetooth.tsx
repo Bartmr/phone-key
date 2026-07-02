@@ -31,7 +31,7 @@ export function TestBluetooth() {
         tryDecodeText(blob),
       );
 
-      const largeResponse = 'Y'.repeat(2000);
+      const largeResponse = 'A'.repeat(40000);
       const responseBytes = new TextEncoder().encode(largeResponse);
       console.log(`[Bluetooth] sending back ${responseBytes.length} bytes`);
       BluetoothModule.sendToClient(responseBytes);

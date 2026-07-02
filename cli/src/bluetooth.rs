@@ -103,24 +103,35 @@ impl BluetoothConnection {
             )
             .await?;
 
-        tokio::time::timeout(
+        let notifications = self.notifications.clone();
+        let response = tokio::time::timeout(
             std::time::Duration::from_millis(5000),
-            self.notifications.lock().await.next(),
+            async {
+                let mut buffer = Vec::new();
+                loop {
+                    let chunk = notifications.lock().await.next().await
+                        .ok_or(Error::StreamEnded)?;
+                    if chunk.is_empty() {
+                        break;
+                    }
+                    buffer.extend_from_slice(&chunk);
+                }
+
+                if buffer.is_empty() {
+                    return Err(Error::EmptyResponse);
+                }
+
+                Ok(buffer)
+            },
         )
         .await
-        .map_err(|_| Error::Timeout)?
-        .ok_or(Error::StreamEnded)?;
-
-        let response = self.characteristic.read().await?;
-
-        if response.is_empty() {
-            return Err(Error::EmptyResponse);
-        }
+        .map_err(|_| Error::Timeout)??;
 
         Ok(response)
     }
 
     pub async fn disconnect(&self) -> Result<(), Error> {
+        drop(self.notifications.lock().await);
         self.device.disconnect().await?;
         Ok(())
     }
