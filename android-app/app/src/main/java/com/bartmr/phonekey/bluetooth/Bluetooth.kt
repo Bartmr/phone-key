@@ -1,6 +1,7 @@
 package com.bartmr.phonekey.bluetooth
 
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothDevice.BOND_BONDED
 import android.bluetooth.BluetoothManager
@@ -8,7 +9,10 @@ import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.ParcelUuid
 import android.util.Log
 import no.nordicsemi.android.ble.observer.ServerObserver
@@ -23,9 +27,50 @@ class Bluetooth(private val context: Context) {
     private var currentAdvertiseCallback: AdvertiseCallback? = null
 
     var onDataReceived: ((ByteArray) -> Unit)? = null
+    var onAdapterStateChanged: ((Boolean) -> Unit)? = null
+
+    private val adapterStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == BluetoothAdapter.ACTION_STATE_CHANGED) {
+                val state = intent.getIntExtra(
+                    BluetoothAdapter.EXTRA_STATE,
+                    BluetoothAdapter.ERROR,
+                )
+                when (state) {
+                    BluetoothAdapter.STATE_ON -> {
+                        onAdapterStateChanged?.invoke(true)
+                    }
+
+                    BluetoothAdapter.STATE_OFF -> {
+                        onAdapterStateChanged?.invoke(false)
+                    }
+                }
+            }
+        }
+    }
+
+    fun registerAdapterStateReceiver() {
+        context.registerReceiver(
+            adapterStateReceiver,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+        )
+    }
+
+    fun unregisterAdapterStateReceiver() {
+        context.unregisterReceiver(adapterStateReceiver)
+    }
+
+    fun isAdapterEnabled(): Boolean {
+        val adapter = bluetoothManager.adapter
+        return adapter != null && adapter.isEnabled
+    }
 
     @SuppressLint("MissingPermission")
     fun startGattServer() {
+        if (serverManager != null) {
+            return
+        }
+
         val adapter = bluetoothManager.adapter
         if (adapter == null || !adapter.isEnabled) {
             throw IllegalStateException("Bluetooth is not enabled")

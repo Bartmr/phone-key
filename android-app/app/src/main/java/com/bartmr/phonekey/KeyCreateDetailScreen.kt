@@ -70,7 +70,7 @@ fun KeyCreateDetailScreen(
     navController: NavController,
     alias: String?,
 ) {
-    val isCreateMode = alias == null || alias == "null"
+    val isCreateMode = alias == null
     val context = LocalContext.current
 
     var keyInfo by remember { mutableStateOf<KeyInfo?>(null) }

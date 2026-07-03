@@ -1,8 +1,10 @@
 package com.bartmr.phonekey
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -77,7 +79,7 @@ fun AppNavHost() {
     val bluetooth = remember { Bluetooth(context) }
     var permissionsGranted by remember { mutableStateOf(false) }
     var permissionsRequested by remember { mutableStateOf(false) }
-    var serverStarted by remember { mutableStateOf(false) }
+    var bluetoothEnabled by remember { mutableStateOf(bluetooth.isAdapterEnabled()) }
 
     val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
@@ -102,18 +104,37 @@ fun AppNavHost() {
         permissionsLauncher.launch(permissions)
     }
 
+    DisposableEffect(bluetooth) {
+        bluetooth.onAdapterStateChanged = { enabled ->
+            bluetoothEnabled = enabled
+
+            if (bluetoothEnabled) {
+                bluetooth.startGattServer()
+            } else {
+                bluetooth.stopGattServer()
+            }
+        }
+        bluetooth.registerAdapterStateReceiver()
+        onDispose {
+            bluetooth.unregisterAdapterStateReceiver()
+            bluetooth.onAdapterStateChanged = null
+        }
+    }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
+                    if (!bluetoothEnabled) {
+                        return@LifecycleEventObserver;
+                    }
+
                     bluetooth.startGattServer()
-                    serverStarted = true
                 }
 
                 Lifecycle.Event.ON_PAUSE -> {
                     bluetooth.stopGattServer()
-                    serverStarted = false
                 }
 
                 else -> {}
@@ -166,6 +187,31 @@ fun AppNavHost() {
                 Text("Grant Permissions")
             }
         }
+        return@AppNavHost
+    }
+
+    if (!bluetoothEnabled) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "Bluetooth is turned off. Turn it on to use Phone Key.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(horizontal = 32.dp),
+            )
+            Button(
+                onClick = {
+                    context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+                },
+                modifier = Modifier.padding(top = 16.dp),
+            ) {
+                Text("Open Bluetooth Settings")
+            }
+        }
+        return@AppNavHost
     }
 
     NavHost(
@@ -179,8 +225,14 @@ fun AppNavHost() {
             )
         }
         composable(
-            route = "key_create_detail/{alias}",
-            arguments = listOf(navArgument("alias") { type = NavType.StringType }),
+            route = "key_create_detail?alias={alias}",
+            arguments = listOf(
+                navArgument("alias") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
         ) { backStackEntry ->
             val alias = backStackEntry.arguments?.getString("alias")
             KeyCreateDetailScreen(

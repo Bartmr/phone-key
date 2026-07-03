@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import android.net.Uri
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.bartmr.phonekey.keystore.KeyInfo
@@ -74,7 +75,7 @@ fun KeyListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate("key_create_detail/null") }
+                onClick = { navController.navigate("key_create_detail") }
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Create key")
             }
@@ -113,7 +114,7 @@ fun KeyListScreen(
                     KeyListItem(
                         keyInfo = keyInfo,
                         onClick = {
-                            navController.navigate("key_create_detail/${keyInfo.alias}")
+                            navController.navigate("key_create_detail?alias=${Uri.encode(keyInfo.alias)}")
                         },
                         onDelete = { deleteConfirmAlias = keyInfo.alias },
                     )
