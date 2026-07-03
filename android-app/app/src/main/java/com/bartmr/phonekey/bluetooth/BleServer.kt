@@ -129,7 +129,7 @@ class BleServer(private val context: Context) {
                     }
                 }
 
-                this@Bluetooth.bleManager = bleManager
+                this@BleServer.bleManager = bleManager
             }
 
             override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {

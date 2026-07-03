@@ -37,8 +37,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bartmr.phonekey.keystore.KeyStoreRepository
-import com.bartmr.phonekey.KeyListScreen
-import com.bartmr.phonekey.bluetooth.Bluetooth
+import com.bartmr.phonekey.bluetooth.BleServer
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -76,10 +75,10 @@ fun AppNavHost() {
     val context = LocalContext.current
     val repository = remember { KeyStoreRepository(context) }
 
-    val bluetooth = remember { Bluetooth(context) }
+    val bleServer = remember { BleServer(context) }
     var permissionsGranted by remember { mutableStateOf(false) }
     var permissionsRequested by remember { mutableStateOf(false) }
-    var bluetoothEnabled by remember { mutableStateOf(bluetooth.isAdapterEnabled()) }
+    var bluetoothEnabled by remember { mutableStateOf(bleServer.isAdapterEnabled()) }
 
     val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
@@ -104,20 +103,20 @@ fun AppNavHost() {
         permissionsLauncher.launch(permissions)
     }
 
-    DisposableEffect(bluetooth) {
-        bluetooth.onAdapterStateChanged = { enabled ->
+    DisposableEffect(bleServer) {
+        bleServer.onAdapterStateChanged = { enabled ->
             bluetoothEnabled = enabled
 
             if (bluetoothEnabled) {
-                bluetooth.startGattServer()
+                bleServer.startGattServer()
             } else {
-                bluetooth.stopGattServer()
+                bleServer.stopGattServer()
             }
         }
-        bluetooth.registerAdapterStateReceiver()
+        bleServer.registerAdapterStateReceiver()
         onDispose {
-            bluetooth.unregisterAdapterStateReceiver()
-            bluetooth.onAdapterStateChanged = null
+            bleServer.unregisterAdapterStateReceiver()
+            bleServer.onAdapterStateChanged = null
         }
     }
 
@@ -130,11 +129,11 @@ fun AppNavHost() {
                         return@LifecycleEventObserver;
                     }
 
-                    bluetooth.startGattServer()
+                    bleServer.startGattServer()
                 }
 
                 Lifecycle.Event.ON_PAUSE -> {
-                    bluetooth.stopGattServer()
+                    bleServer.stopGattServer()
                 }
 
                 else -> {}
@@ -143,12 +142,12 @@ fun AppNavHost() {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            bluetooth.stopGattServer()
+            bleServer.stopGattServer()
         }
     }
 
-    DisposableEffect(bluetooth) {
-        bluetooth.onDataReceived = { data ->
+    DisposableEffect(bleServer) {
+        bleServer.onDataReceived = { data ->
             val text = String(data, Charsets.UTF_8)
 
             when (val message = json.decodeFromString<ClientMessage>(text)) {
@@ -162,7 +161,7 @@ fun AppNavHost() {
             }
         }
         onDispose {
-            bluetooth.onDataReceived = null
+            bleServer.onDataReceived = null
         }
     }
 

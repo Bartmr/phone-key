@@ -19,13 +19,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.bartmr.phonekey.bluetooth.Bluetooth
+import com.bartmr.phonekey.bluetooth.BleServer
 
 
 @Composable
 fun BluetoothTestScreen() {
     val context = LocalContext.current
-    val bluetooth = remember { Bluetooth(context) }
+    val bluetooth = remember { BleServer(context) }
     var serverStarted by remember { mutableStateOf(false) }
 
     val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
