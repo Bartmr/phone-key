@@ -46,11 +46,8 @@ class KeyStoreRepository(context: Context) {
                     encryptionPaddings = storedMeta?.encryptionPaddings ?: emptyList(),
                     signaturePaddings = storedMeta?.signaturePaddings ?: emptyList(),
                     blockModes = storedMeta?.blockModes ?: emptyList(),
-                    isInsideSecureHardware = true,
-                    origin = KeyProperties.ORIGIN_UNKNOWN,
                     userAuthenticationRequired = storedMeta?.userAuthenticationRequired ?: false,
                     userAuthenticationValidityDurationSeconds = storedMeta?.userAuthenticationValidityDurationSeconds ?: -1,
-                    isSymmetric = false,
                 )
             }
             is KeyStore.SecretKeyEntry -> {
@@ -64,11 +61,8 @@ class KeyStoreRepository(context: Context) {
                     encryptionPaddings = storedMeta?.encryptionPaddings ?: emptyList(),
                     signaturePaddings = storedMeta?.signaturePaddings ?: emptyList(),
                     blockModes = storedMeta?.blockModes ?: emptyList(),
-                    isInsideSecureHardware = true,
-                    origin = KeyProperties.ORIGIN_UNKNOWN,
                     userAuthenticationRequired = storedMeta?.userAuthenticationRequired ?: false,
                     userAuthenticationValidityDurationSeconds = storedMeta?.userAuthenticationValidityDurationSeconds ?: -1,
-                    isSymmetric = true,
                 )
             }
             else -> throw IllegalArgumentException(
@@ -82,26 +76,26 @@ class KeyStoreRepository(context: Context) {
         prefs.edit().remove(metaKey(alias)).apply()
     }
 
-    fun generateKey(spec: KeyGenSpec) {
-        val isSymmetric = spec.algorithm == KeyProperties.KEY_ALGORITHM_AES ||
-                spec.algorithm == KeyProperties.KEY_ALGORITHM_HMAC_SHA256
+    fun generateKey(info: KeyInfo) {
+        val isSymmetric = info.algorithm == KeyProperties.KEY_ALGORITHM_AES ||
+                info.algorithm == KeyProperties.KEY_ALGORITHM_HMAC_SHA256
 
         if (isSymmetric) {
-            val keyGenerator = KeyGenerator.getInstance(spec.algorithm, "AndroidKeyStore")
-            keyGenerator.init(spec.toAndroidSpec())
+            val keyGenerator = KeyGenerator.getInstance(info.algorithm, "AndroidKeyStore")
+            keyGenerator.init(info.toAlgorithmParameterSpec())
             keyGenerator.generateKey()
         } else {
-            val keyPairGenerator = KeyPairGenerator.getInstance(spec.algorithm, "AndroidKeyStore")
-            keyPairGenerator.initialize(spec.toAndroidSpec())
+            val keyPairGenerator = KeyPairGenerator.getInstance(info.algorithm, "AndroidKeyStore")
+            keyPairGenerator.initialize(info.toAlgorithmParameterSpec())
             keyPairGenerator.generateKeyPair()
         }
 
-        prefs.edit().putString(metaKey(spec.alias), json.encodeToString(KeyGenSpec.serializer(), spec)).apply()
+        prefs.edit().putString(metaKey(info.alias), json.encodeToString(KeyInfo.serializer(), info)).apply()
     }
 
-    private fun loadMeta(alias: String): KeyGenSpec? {
+    private fun loadMeta(alias: String): KeyInfo? {
         val raw = prefs.getString(metaKey(alias), null) ?: return null
-        return json.decodeFromString(KeyGenSpec.serializer(), raw)
+        return json.decodeFromString(KeyInfo.serializer(), raw)
     }
 
     private fun metaKey(alias: String) = "key_meta_$alias"

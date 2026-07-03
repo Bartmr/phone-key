@@ -52,11 +52,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bartmr.phonekey.keystore.KeyGenSpec
 import com.bartmr.phonekey.keystore.KeyInfo
 import com.bartmr.phonekey.keystore.KeyStoreRepository
 import com.bartmr.phonekey.keystore.purposesToDisplayNames
-import com.bartmr.phonekey.keystore.toAndroidSpec
 import com.bartmr.phonekey.keystore.toDisplayNames
 import com.bartmr.phonekey.keystore.BLOCK_MODE_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.DIGEST_DISPLAY_NAMES
@@ -458,7 +456,7 @@ private fun CreateKeyForm(
                 return@Button
             }
 
-            val spec = KeyGenSpec(
+            val info = KeyInfo(
                 alias = trimmedAlias,
                 algorithm = selectedAlgorithm,
                 keySize = selectedKeySize,
@@ -469,10 +467,9 @@ private fun CreateKeyForm(
                 blockModes = selectedBlockModes.toList(),
                 userAuthenticationRequired = userAuthRequired,
                 userAuthenticationValidityDurationSeconds = authValiditySeconds.toIntOrNull() ?: -1,
-                authType = authType,
             )
 
-            repository.generateKey(spec)
+            repository.generateKey(info)
             onKeyCreated()
         },
         modifier = Modifier.fillMaxWidth(),
@@ -490,7 +487,6 @@ private fun KeyDetailView(info: KeyInfo) {
     DetailRow("Alias", info.alias)
     DetailRow("Algorithm", info.algorithm)
     DetailRow("Key size", "${info.keySize} bits")
-    DetailRow("Type", if (info.isSymmetric) "Symmetric" else "Asymmetric")
     DetailRow("Purposes", info.purposes.purposesToDisplayNames().joinToString(", "))
 
     if (info.digests.isNotEmpty()) {
@@ -512,8 +508,6 @@ private fun KeyDetailView(info: KeyInfo) {
         DetailRow("Block modes", info.blockModes.toDisplayNames(BLOCK_MODE_DISPLAY_NAMES).joinToString(", "))
     }
 
-    DetailRow("Secure hardware", if (info.isInsideSecureHardware) "Yes" else "No")
-    DetailRow("Origin", ORIGIN_DISPLAY_NAMES[info.origin] ?: "Unknown")
     DetailRow("User auth required", if (info.userAuthenticationRequired) "Yes" else "No")
     if (info.userAuthenticationRequired) {
         val timeout = info.userAuthenticationValidityDurationSeconds
