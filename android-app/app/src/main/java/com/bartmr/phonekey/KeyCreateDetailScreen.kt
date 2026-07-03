@@ -163,7 +163,7 @@ private fun CreateKeyForm(
     var selectedSignaturePaddings by remember { mutableStateOf(emptyList<String>()) }
     var selectedBlockModes by remember { mutableStateOf(emptyList<String>()) }
     var userAuthRequired by remember { mutableStateOf(false) }
-    var authValiditySeconds by remember { mutableStateOf("-1") }
+    var authValiditySeconds by remember { mutableStateOf("0") }
     var authType by remember { mutableStateOf(KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL) }
     var aliasError by remember { mutableStateOf<String?>(null) }
 
@@ -406,7 +406,7 @@ private fun CreateKeyForm(
         OutlinedTextField(
             value = authValiditySeconds,
             onValueChange = { authValiditySeconds = it },
-            label = { Text("Timeout (seconds, -1 for every use)") },
+            label = { Text("Timeout (seconds, 0 for every use)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -466,7 +466,7 @@ private fun CreateKeyForm(
                 signaturePaddings = selectedSignaturePaddings.toList(),
                 blockModes = selectedBlockModes.toList(),
                 userAuthenticationRequired = userAuthRequired,
-                userAuthenticationValidityDurationSeconds = authValiditySeconds.toIntOrNull() ?: -1,
+                userAuthenticationValidityDurationSeconds = authValiditySeconds.toIntOrNull() ?: 0,
             )
 
             repository.generateKey(info)
@@ -511,7 +511,7 @@ private fun KeyDetailView(info: KeyInfo) {
     DetailRow("User auth required", if (info.userAuthenticationRequired) "Yes" else "No")
     if (info.userAuthenticationRequired) {
         val timeout = info.userAuthenticationValidityDurationSeconds
-        val timeoutDisplay = if (timeout == -1) "Every use" else "${timeout}s"
+        val timeoutDisplay = if (timeout == 0) "Every use" else "${timeout}s"
         DetailRow("Auth timeout", timeoutDisplay)
     }
 }

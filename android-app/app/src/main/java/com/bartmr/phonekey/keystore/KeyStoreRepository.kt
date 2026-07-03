@@ -47,7 +47,7 @@ class KeyStoreRepository(context: Context) {
                     signaturePaddings = storedMeta?.signaturePaddings ?: emptyList(),
                     blockModes = storedMeta?.blockModes ?: emptyList(),
                     userAuthenticationRequired = storedMeta?.userAuthenticationRequired ?: false,
-                    userAuthenticationValidityDurationSeconds = storedMeta?.userAuthenticationValidityDurationSeconds ?: -1,
+                    userAuthenticationValidityDurationSeconds = storedMeta?.userAuthenticationValidityDurationSeconds ?: 0,
                 )
             }
             is KeyStore.SecretKeyEntry -> {
@@ -62,7 +62,7 @@ class KeyStoreRepository(context: Context) {
                     signaturePaddings = storedMeta?.signaturePaddings ?: emptyList(),
                     blockModes = storedMeta?.blockModes ?: emptyList(),
                     userAuthenticationRequired = storedMeta?.userAuthenticationRequired ?: false,
-                    userAuthenticationValidityDurationSeconds = storedMeta?.userAuthenticationValidityDurationSeconds ?: -1,
+                    userAuthenticationValidityDurationSeconds = storedMeta?.userAuthenticationValidityDurationSeconds ?: 0,
                 )
             }
             else -> throw IllegalArgumentException(
