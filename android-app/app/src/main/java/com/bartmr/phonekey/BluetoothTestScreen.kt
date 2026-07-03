@@ -1,0 +1,93 @@
+package com.bartmr.phonekey
+
+import android.Manifest
+import android.os.Build
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.bartmr.phonekey.bluetooth.Bluetooth
+
+
+@Composable
+fun BluetoothTestScreen() {
+    val context = LocalContext.current
+    val bluetooth = remember { Bluetooth(context) }
+    var serverStarted by remember { mutableStateOf(false) }
+
+    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+            Manifest.permission.BLUETOOTH_CONNECT,
+        )
+    } else {
+        arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        )
+    }
+
+    val permissionsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        if (permissions.all { results[it] == true }) {
+            bluetooth.startGattServer()
+            serverStarted = true
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        permissionsLauncher.launch(permissions)
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    // Server is started after permissions are granted
+                }
+
+                Lifecycle.Event.ON_PAUSE -> {
+                    bluetooth.stopGattServer()
+                    serverStarted = false
+                }
+
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            bluetooth.stopGattServer()
+        }
+    }
+
+    DisposableEffect(bluetooth) {
+        val payload = ByteArray(4096) { (it % 256).toByte() }
+
+        bluetooth.onDataReceived = { data ->
+            Log.i("BluetoothTestScreen", "Received ${data.size} bytes: ${String(data, Charsets.UTF_8)}")
+            bluetooth.sendToClient(payload)
+        }
+        onDispose {
+            bluetooth.onDataReceived = null
+        }
+    }
+
+    Box(Modifier.fillMaxSize())
+
+}

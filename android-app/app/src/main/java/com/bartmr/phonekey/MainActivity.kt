@@ -3,44 +3,41 @@ package com.bartmr.phonekey
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
-import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.bartmr.phonekey.keystore.KeyStoreRepository
+import com.bartmr.phonekey.KeyListScreen
 import com.bartmr.phonekey.bluetooth.Bluetooth
-import com.bartmr.phonekey.ssh.Ssh
-import com.bartmr.phonekey.ssh.SignResult
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -49,13 +46,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val ssh = Ssh(this)
-        val bluetooth = Bluetooth(this)
-
         enableEdgeToEdge()
         setContent {
             PhoneKeyTheme {
-                MainScreen(bluetooth, ssh)
+                AppNavHost()
             }
         }
     }
@@ -74,17 +68,16 @@ sealed class ClientMessage {
 
 val json = Json { ignoreUnknownKeys = true }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(bluetooth: Bluetooth, ssh: Ssh) {
+fun AppNavHost() {
+    val navController = rememberNavController()
+    val context = LocalContext.current
+    val repository = remember { KeyStoreRepository(context) }
+
+    val bluetooth = remember { Bluetooth(context) }
     var permissionsGranted by remember { mutableStateOf(false) }
     var permissionsRequested by remember { mutableStateOf(false) }
     var serverStarted by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        ssh.initializeKey()
-    }
 
     val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
@@ -139,31 +132,13 @@ fun MainScreen(bluetooth: Bluetooth, ssh: Ssh) {
 
             when (val message = json.decodeFromString<ClientMessage>(text)) {
                 is ClientMessage.SignRequest -> {
-                    val dataBytes = Base64.decode(message.data, Base64.DEFAULT)
-                    coroutineScope.launch {
-                        val result = withContext(Dispatchers.Main) {
-                            ssh.sign(dataBytes)
-                        }
-                        when (result) {
-                            is SignResult.Success -> {
-                                bluetooth.sendToClient(result.rawSignature)
-                            }
 
-                            is SignResult.Error -> throw AssertionError("Could not sign data")
-                        }
-                    }
                 }
 
                 is ClientMessage.GetPublicKey -> {
-                    coroutineScope.launch {
-                        val publicKey = withContext(Dispatchers.IO) {
-                            ssh.getPublicKey()
-                        }
-                        bluetooth.sendToClient(publicKey.toByteArray(Charsets.UTF_8))
-                    }
+
                 }
             }
-
         }
         onDispose {
             bluetooth.onDataReceived = null
@@ -191,16 +166,28 @@ fun MainScreen(bluetooth: Bluetooth, ssh: Ssh) {
                 Text("Grant Permissions")
             }
         }
-    } else if (!serverStarted) {
-        // Show nothing while waiting for the server to start
-        return
-    } else {
-        Scaffold(
-            topBar = {
-                TopAppBar(title = { Text("Phone Key") })
-            }
-        ) { padding ->
-            Box(Modifier.padding(padding)) {}
+    }
+
+    NavHost(
+        navController = navController,
+        startDestination = "key_list",
+    ) {
+        composable("key_list") {
+            KeyListScreen(
+                repository = repository,
+                navController = navController,
+            )
+        }
+        composable(
+            route = "key_create_detail/{alias}",
+            arguments = listOf(navArgument("alias") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val alias = backStackEntry.arguments?.getString("alias")
+            KeyCreateDetailScreen(
+                repository = repository,
+                navController = navController,
+                alias = alias,
+            )
         }
     }
 }
