@@ -17,12 +17,21 @@ import kotlinx.serialization.json.Json
 @Serializable
 sealed class ClientMessage {
     @Serializable
-    @SerialName("sign")
-    data class SignRequest(val data: String) : ClientMessage()
+    @SerialName("list-keys")
+    class ListKeys : ClientMessage()
 
     @Serializable
-    @SerialName("get-public-key")
-    data object GetPublicKey : ClientMessage()
+    @SerialName("sign")
+    data class Sign(
+        val keyAlias: String,
+        val data: String,
+    ) : ClientMessage()
+
+    @Serializable
+    @SerialName("get-ssh-public-key")
+    data class GetSshPublicKey (
+        val keyAlias: String,
+    ) : ClientMessage()
 }
 
 private val json = Json { ignoreUnknownKeys = true }
@@ -83,10 +92,13 @@ fun rememberBleRequestsHandler(): BleServerState {
         bleServer.onDataReceived = { data ->
             val text = String(data, Charsets.UTF_8)
             when (val message = json.decodeFromString<ClientMessage>(text)) {
-                is ClientMessage.SignRequest -> {
+                is ClientMessage.ListKeys -> {
+
+                }
+                is ClientMessage.Sign -> {
                 }
 
-                is ClientMessage.GetPublicKey -> {
+                is ClientMessage.GetSshPublicKey -> {
                 }
             }
         }
