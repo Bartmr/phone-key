@@ -1,21 +1,17 @@
 package com.bartmr.phonekey.keystore
 
-import android.content.Context
 import android.security.keystore.KeyProperties
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.interfaces.ECPublicKey
 import java.security.interfaces.RSAPublicKey
 import javax.crypto.KeyGenerator
-import kotlinx.serialization.json.Json
 
-class KeyStoreRepository(context: Context) {
+class KeyStoreRepository {
     private val keyStore: KeyStore = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val json = Json { ignoreUnknownKeys = true }
 
     fun listAliases(): List<String> =
-        keyStore.aliases().asSequence().filter { it != SSH_KEY_ALIAS }.toList()
+        keyStore.aliases().asSequence().toList()
 
     fun keyExists(alias: String): Boolean =
         keyStore.containsAlias(alias)
@@ -23,8 +19,6 @@ class KeyStoreRepository(context: Context) {
     fun getKeyInfo(alias: String): KeyInfo {
         val entry = keyStore.getEntry(alias, null)
             ?: throw IllegalArgumentException("Key '$alias' not found in Android Keystore")
-
-        val storedMeta = loadMeta(alias)
 
         return when (entry) {
             is KeyStore.PrivateKeyEntry -> {
@@ -36,33 +30,41 @@ class KeyStoreRepository(context: Context) {
                     is RSAPublicKey -> publicKey.modulus.bitLength()
                     else -> 0
                 }
+                val keystoreInfo = entry.privateKey as android.security.keystore.KeyInfo
 
                 KeyInfo(
                     alias = alias,
                     algorithm = algorithm,
                     keySize = keySize,
-                    purposes = storedMeta?.purposes ?: 0,
-                    digests = storedMeta?.digests ?: emptyList(),
-                    encryptionPaddings = storedMeta?.encryptionPaddings ?: emptyList(),
-                    signaturePaddings = storedMeta?.signaturePaddings ?: emptyList(),
-                    blockModes = storedMeta?.blockModes ?: emptyList(),
-                    userAuthenticationRequired = storedMeta?.userAuthenticationRequired ?: false,
-                    userAuthenticationValidityDurationSeconds = storedMeta?.userAuthenticationValidityDurationSeconds ?: 0,
+                    purposes = keystoreInfo.purposes,
+                    digests = keystoreInfo.digests.toList(),
+                    encryptionPaddings = keystoreInfo.encryptionPaddings.toList(),
+                    signaturePaddings = keystoreInfo.signaturePaddings.toList(),
+                    blockModes = keystoreInfo.blockModes.toList(),
+                    userAuthenticationRequired = keystoreInfo.isUserAuthenticationRequired,
+                    userAuthenticationValidityDurationSeconds =
+                        keystoreInfo.userAuthenticationValidityDurationSeconds.let {
+                            if (it == -1) 0 else it
+                        },
                 )
             }
             is KeyStore.SecretKeyEntry -> {
-                val secretKey = entry.secretKey
+                val keystoreInfo = entry.secretKey as android.security.keystore.KeyInfo
+
                 KeyInfo(
                     alias = alias,
-                    algorithm = secretKey.algorithm,
-                    keySize = storedMeta?.keySize ?: 0,
-                    purposes = storedMeta?.purposes ?: 0,
-                    digests = storedMeta?.digests ?: emptyList(),
-                    encryptionPaddings = storedMeta?.encryptionPaddings ?: emptyList(),
-                    signaturePaddings = storedMeta?.signaturePaddings ?: emptyList(),
-                    blockModes = storedMeta?.blockModes ?: emptyList(),
-                    userAuthenticationRequired = storedMeta?.userAuthenticationRequired ?: false,
-                    userAuthenticationValidityDurationSeconds = storedMeta?.userAuthenticationValidityDurationSeconds ?: 0,
+                    algorithm = keystoreInfo.keyAlgorithm,
+                    keySize = keystoreInfo.keySize,
+                    purposes = keystoreInfo.purposes,
+                    digests = keystoreInfo.digests.toList(),
+                    encryptionPaddings = keystoreInfo.encryptionPaddings.toList(),
+                    signaturePaddings = keystoreInfo.signaturePaddings.toList(),
+                    blockModes = keystoreInfo.blockModes.toList(),
+                    userAuthenticationRequired = keystoreInfo.isUserAuthenticationRequired,
+                    userAuthenticationValidityDurationSeconds =
+                        keystoreInfo.userAuthenticationValidityDurationSeconds.let {
+                            if (it == -1) 0 else it
+                        },
                 )
             }
             else -> throw IllegalArgumentException(
@@ -73,7 +75,6 @@ class KeyStoreRepository(context: Context) {
 
     fun deleteKey(alias: String) {
         keyStore.deleteEntry(alias)
-        prefs.edit().remove(metaKey(alias)).apply()
     }
 
     fun generateKey(info: KeyInfo) {
@@ -89,19 +90,9 @@ class KeyStoreRepository(context: Context) {
             keyPairGenerator.initialize(info.toAlgorithmParameterSpec())
             keyPairGenerator.generateKeyPair()
         }
-
-        prefs.edit().putString(metaKey(info.alias), json.encodeToString(KeyInfo.serializer(), info)).apply()
     }
-
-    private fun loadMeta(alias: String): KeyInfo? {
-        val raw = prefs.getString(metaKey(alias), null) ?: return null
-        return json.decodeFromString(KeyInfo.serializer(), raw)
-    }
-
-    private fun metaKey(alias: String) = "key_meta_$alias"
 
     companion object {
         const val SSH_KEY_ALIAS = "ssh_key"
-        private const val PREFS_NAME = "phonekey_key_metadata"
     }
 }

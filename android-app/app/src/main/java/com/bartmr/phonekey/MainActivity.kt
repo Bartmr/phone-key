@@ -30,7 +30,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.bartmr.phonekey.keystore.KeyStoreRepository
 import com.bartmr.phonekey.bluetooth.rememberBleServer
@@ -52,8 +51,7 @@ class MainActivity : AppCompatActivity() {
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
-    val context = LocalContext.current
-    val repository = remember { KeyStoreRepository(context) }
+    val repository = remember { KeyStoreRepository() }
 
     var permissionsGranted by remember { mutableStateOf(false) }
     var permissionsRequested by remember { mutableStateOf(false) }
