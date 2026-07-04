@@ -1,8 +1,9 @@
 use base64::Engine;
+use serde::Deserialize;
 use ssh_agent_lib::agent::{listen, Session};
 use ssh_agent_lib::error::AgentError;
 use ssh_agent_lib::proto::{Identity, PublicCredential, SignRequest};
-use ssh_agent_lib::ssh_key::{Algorithm, PublicKey, Signature};
+use ssh_agent_lib::ssh_key::{PublicKey, Signature};
 use std::sync::Arc;
 use tokio::net::UnixListener;
 use tokio::sync::Mutex;
@@ -10,9 +11,17 @@ use phone_key_cli::{bluetooth, config};
 
 const SOCKET_PATH: &str = "/tmp/phone-key-agent.sock";
 
+#[derive(Deserialize)]
+struct IdentityResponse {
+    alias: String,
+    #[serde(rename = "publicKey")]
+    public_key: String,
+}
+
 #[derive(Clone)]
 struct AppSession {
     connection: Arc<Mutex<bluetooth::BluetoothConnection>>,
+    identities: Vec<(PublicCredential, String)>,
 }
 
 impl AppSession {
@@ -24,6 +33,7 @@ impl AppSession {
         let connection = bluetooth::BluetoothConnection::connect(device_address).await?;
         Ok(Self {
             connection: Arc::new(Mutex::new(connection)),
+            identities: Vec::new(),
         })
     }
 
@@ -37,11 +47,72 @@ impl AppSession {
 #[ssh_agent_lib::async_trait]
 impl Session for AppSession {
     async fn request_identities(&mut self) -> Result<Vec<Identity>, AgentError> {
-        
+        let response = self
+            .send_message(r#"{"type":"ssh-request-identities"}"#)
+            .await?;
+
+        let parsed: Vec<IdentityResponse> = serde_json::from_slice(&response).map_err(|e| {
+            AgentError::other(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("failed to parse identities response: {e}"),
+            ))
+        })?;
+
+        self.identities.clear();
+        let mut identities = Vec::new();
+        for item in parsed {
+            let pk = PublicKey::from_openssh(&item.public_key).map_err(|e| {
+                AgentError::other(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("invalid public key for '{}': {e}", item.alias),
+                ))
+            })?;
+            let credential = PublicCredential::Key(pk.key_data().clone());
+            identities.push(Identity {
+                credential: credential.clone(),
+                comment: item.alias.clone(),
+            });
+            self.identities.push((credential, item.alias));
+        }
+
+        Ok(identities)
     }
 
     async fn sign(&mut self, request: SignRequest) -> Result<Signature, AgentError> {
+        let alias = self
+            .identities
+            .iter()
+            .find(|(cred, _)| cred == &request.credential)
+            .map(|(_, alias)| alias.as_str())
+            .ok_or_else(|| {
+                AgentError::other(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "key not found in cached identities",
+                ))
+            })?;
 
+        let data_b64 = base64::engine::general_purpose::STANDARD.encode(&request.data);
+        let json = serde_json::json!({
+            "type": "ssh-sign",
+            "keyAlias": alias,
+            "data": data_b64,
+        });
+
+        let response = self.send_message(&json.to_string()).await?;
+        if response.is_empty() {
+            return Err(AgentError::other(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "signing failed on device",
+            )));
+        }
+
+        let algorithm = request.credential.key_data().algorithm();
+        Signature::new(algorithm, response).map_err(|e| {
+            AgentError::other(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("failed to construct signature: {e}"),
+            ))
+        })
     }
 }
 

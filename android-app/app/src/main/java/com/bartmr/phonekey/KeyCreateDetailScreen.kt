@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -117,8 +119,14 @@ fun KeyCreateDetailScreen(
                     Button(
                         onClick = { showDeleteDialog = true },
                         modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                            disabledContainerColor = ButtonDefaults.buttonColors().disabledContainerColor,
+                            disabledContentColor = ButtonDefaults.buttonColors().disabledContentColor,
+                        ),
                     ) {
-                        Text("Delete key", color = MaterialTheme.colorScheme.error)
+                        Text("Delete key")
                     }
                     Spacer(Modifier.height(24.dp))
                 }

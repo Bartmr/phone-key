@@ -1,16 +1,15 @@
 package com.bartmr.phonekey
 
-import android.Manifest
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -18,11 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,38 +48,14 @@ class MainActivity : AppCompatActivity() {
 fun AppNavHost() {
     val context = LocalContext.current
     val navController = rememberNavController()
-    val repository = remember { KeyStoreRepository() }
+    val repository = remember { KeyStoreRepository(context) }
 
-    var permissionsGranted by remember { mutableStateOf(false) }
-    var permissionsRequested by remember { mutableStateOf(false) }
-
-    val bleServerState = rememberBleRequestsHandler()
-    val bluetoothEnabled = bleServerState.isBluetoothEnabled
-
-    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_ADVERTISE,
-            Manifest.permission.BLUETOOTH_CONNECT,
-        )
-    } else {
-        arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        )
-    }
-
-    val permissionsLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        permissionsRequested = true
-        permissionsGranted = permissions.all { results[it] == true }
-    }
-
-    LaunchedEffect(Unit) {
-        permissionsLauncher.launch(permissions)
-    }
-
-    if (permissionsRequested && !permissionsGranted) {
+    val bleRequestsHandler = rememberBleRequestsHandler(
+        repository = repository,
+        activity = context as FragmentActivity,
+    )
+    
+    if (bleRequestsHandler.permissionsRequested && !bleRequestsHandler.permissionsGranted) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
@@ -98,7 +69,7 @@ fun AppNavHost() {
             )
             Button(
                 onClick = {
-                    permissionsLauncher.launch(permissions)
+                    bleRequestsHandler.permissionsLauncher.launch(bleRequestsHandler.permissions)
                 },
                 modifier = Modifier.padding(top = 16.dp),
             ) {
@@ -108,25 +79,30 @@ fun AppNavHost() {
         return@AppNavHost
     }
 
-    if (!bluetoothEnabled) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
+    if (!bleRequestsHandler.isBluetoothEnabled) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainer),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = "Bluetooth is turned off. Turn it on to use Phone Key.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 32.dp),
-            )
-            Button(
-                onClick = {
-                    context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
-                },
-                modifier = Modifier.padding(top = 16.dp),
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("Open Bluetooth Settings")
+                Text(
+                    text = "Bluetooth is turned off. Turn it on to use Phone Key.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 32.dp),
+                )
+                Button(
+                    onClick = {
+                        context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+                    },
+                    modifier = Modifier.padding(top = 16.dp),
+                ) {
+                    Text("Open Bluetooth Settings")
+                }
             }
         }
         return@AppNavHost

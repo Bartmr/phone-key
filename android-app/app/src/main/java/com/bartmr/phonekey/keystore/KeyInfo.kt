@@ -3,8 +3,10 @@ package com.bartmr.phonekey.keystore
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import kotlinx.serialization.Serializable
 import java.security.spec.AlgorithmParameterSpec
 
+@Serializable
 data class KeyInfo(
     val alias: String,
     val algorithm: String,
