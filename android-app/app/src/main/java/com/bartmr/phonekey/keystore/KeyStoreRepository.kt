@@ -53,7 +53,7 @@ class KeyStoreRepository {
 
                 KeyInfo(
                     alias = alias,
-                    algorithm = keystoreInfo.keyAlgorithm,
+                    algorithm = entry.secretKey.algorithm,
                     keySize = keystoreInfo.keySize,
                     purposes = keystoreInfo.purposes,
                     digests = keystoreInfo.digests.toList(),
@@ -90,9 +90,5 @@ class KeyStoreRepository {
             keyPairGenerator.initialize(info.toAlgorithmParameterSpec())
             keyPairGenerator.generateKeyPair()
         }
-    }
-
-    companion object {
-        const val SSH_KEY_ALIAS = "ssh_key"
     }
 }
