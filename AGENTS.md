@@ -20,7 +20,7 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 ### Files and directories
 
-- `src` contains the logic to be shipped, organized by binary and features.
+- `src` contains the logic to be shipped, organized by features.
 - `src/config.rs` loads the user's config.
 - `src/bluetooth.rs` manages the BLE connection to the mobile app: connects to a device, discovers the GATT service/characteristic, and provides `send_message` for request-response communication over Bluetooth.
 - `development` has development and debugging scripts.
@@ -40,3 +40,8 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 - `com.bartmr.phonekey` contains the activities, and their components. There is a preference for keeping most of the logic in near the activity.
 - `com.bartmr.phonekey.ui` is for generic UI components, logic and design tokens.
+- `com.bartmr.phonekey.<feature>` contains other app dependencies and features.
+
+### Files and directories
+
+- `docs` documents the API protocol for communicating with the mobile app.

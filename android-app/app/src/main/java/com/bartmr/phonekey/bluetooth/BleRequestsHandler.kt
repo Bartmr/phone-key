@@ -21,8 +21,8 @@ sealed class ClientMessage {
     class ListKeys : ClientMessage()
 
     @Serializable
-    @SerialName("sign")
-    data class Sign(
+    @SerialName("ssh-sign")
+    data class SshSign(
         val keyAlias: String,
         val data: String,
     ) : ClientMessage()
@@ -95,7 +95,7 @@ fun rememberBleRequestsHandler(): BleServerState {
                 is ClientMessage.ListKeys -> {
 
                 }
-                is ClientMessage.Sign -> {
+                is ClientMessage.SshSign -> {
                 }
 
                 is ClientMessage.GetSshPublicKey -> {
