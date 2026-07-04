@@ -20,7 +20,7 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 ### Files and directories
 
-- `src` contains the logic to be shipped, structured by commands. If the command's logic needs to be split into multiple files, keep those files near that command's file.
+- `src` is organized by CLI command, not by technical role. Each command gets its own module, and subcommands map to submodules inside it. Don't extract shared helpers into generic modules - keep logic colocated with the command it serves unless it is genuinely reused across commands.
 - `src/config.rs` loads the user's config.
 - `src/bluetooth.rs` manages the BLE connection to the mobile app: connects to a device, discovers the GATT service/characteristic, and provides `send_message` for request-response communication over Bluetooth.
 - `development` has development and debugging scripts.
@@ -38,7 +38,7 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 ### Packages
 
-- `com.bartmr.phonekey` is structured by the app's screens. If a screen's logic needs to be split into multiple files, keep those files near the screen's file.
+- `com.bartmr.phonekey` packages are organized by screen/feature, not by technical role. Put files near the screen they belong to - don't extract them into shared layers unless they are genuinely reused across screens.
 - `com.bartmr.phonekey.ui` is for generic UI components, logic and design tokens.
 
 ### Files and directories
