@@ -165,17 +165,6 @@ private fun CreateKeyForm(
     var selectedBlockModes by remember { mutableStateOf(emptyList<String>()) }
     var userAuthRequired by remember { mutableStateOf(false) }
     var authValiditySeconds by remember { mutableStateOf("0") }
-    var authType by remember { mutableStateOf(KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL) }
-
-    val aliasError by remember {
-        derivedStateOf {
-            val trimmed = alias.trim()
-            when {
-                trimmed.isEmpty() -> "Alias must not be empty"
-                else -> null
-            }
-        }
-    }
     val authValidityError by remember {
         derivedStateOf {
             if (!userAuthRequired) return@derivedStateOf null
@@ -186,6 +175,17 @@ private fun CreateKeyForm(
             }
         }
     }
+    var authType by remember { mutableStateOf(KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL) }
+    val aliasError by remember {
+        derivedStateOf {
+            val trimmed = alias.trim()
+            when {
+                trimmed.isEmpty() -> "Alias must not be empty"
+                else -> null
+            }
+        }
+    }
+    
 
     val algorithms = listOf(
         KeyProperties.KEY_ALGORITHM_EC,
