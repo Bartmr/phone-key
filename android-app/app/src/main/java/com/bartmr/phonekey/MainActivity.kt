@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,7 +33,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.compose.ui.unit.dp
 import com.bartmr.phonekey.keystore.KeyStoreRepository
-import com.bartmr.phonekey.bluetooth.rememberBleServer
+import com.bartmr.phonekey.bluetooth.rememberBleRequestsHandler
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
 
 class MainActivity : AppCompatActivity() {
@@ -50,13 +51,14 @@ class MainActivity : AppCompatActivity() {
 
 @Composable
 fun AppNavHost() {
+    val context = LocalContext.current
     val navController = rememberNavController()
     val repository = remember { KeyStoreRepository() }
 
     var permissionsGranted by remember { mutableStateOf(false) }
     var permissionsRequested by remember { mutableStateOf(false) }
 
-    val bleServerState = rememberBleServer()
+    val bleServerState = rememberBleRequestsHandler()
     val bluetoothEnabled = bleServerState.isBluetoothEnabled
 
     val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

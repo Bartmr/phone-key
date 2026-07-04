@@ -33,7 +33,7 @@ class BleServerState(
 )
 
 @Composable
-fun rememberBleServer(): BleServerState {
+fun rememberBleRequestsHandler(): BleServerState {
     val context = LocalContext.current
     val bleServer = remember { BleServer(context) }
     var bluetoothEnabled by remember { mutableStateOf(bleServer.isAdapterEnabled()) }
