@@ -37,31 +37,11 @@ impl AppSession {
 #[ssh_agent_lib::async_trait]
 impl Session for AppSession {
     async fn request_identities(&mut self) -> Result<Vec<Identity>, AgentError> {
-        let response = self.send_message("{\"type\":\"get-public-key\"}").await?;
-        let public_key_str =
-            String::from_utf8(response).map_err(AgentError::other)?;
-
-        let public_key =
-            PublicKey::from_openssh(&public_key_str).map_err(AgentError::other)?;
-
-        Ok(vec![Identity {
-            credential: PublicCredential::Key(public_key.key_data().clone()),
-            comment: "phone-key".into(),
-        }])
+        
     }
 
     async fn sign(&mut self, request: SignRequest) -> Result<Signature, AgentError> {
-        let data_base64 = base64::engine::general_purpose::STANDARD.encode(&request.data);
-        let message =
-            serde_json::json!({"type": "sign", "data": data_base64}).to_string();
 
-        let response = self.send_message(&message).await?;
-
-        Signature::new(
-            Algorithm::new("ecdsa-sha2-nistp256").map_err(AgentError::other)?,
-            response,
-        )
-        .map_err(AgentError::other)
     }
 }
 
