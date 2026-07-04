@@ -38,7 +38,7 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 ### Packages
 
-- `com.bartmr.phonekey` contains the activities, and their components. There is a preference for keeping most of the logic in near the activity.
+- `com.bartmr.phonekey` contains the screens, and their composables. If the screen logic needs to be split into multiple files, keep those files near the screen.
 - `com.bartmr.phonekey.ui` is for generic UI components, logic and design tokens.
 - `com.bartmr.phonekey.<feature>` contains other app dependencies and features.
 

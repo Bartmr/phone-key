@@ -18,7 +18,7 @@ import kotlinx.serialization.json.Json
 sealed class ClientMessage {
     @Serializable
     @SerialName("list-keys")
-    class ListKeys : ClientMessage()
+    class ListSShKeys : ClientMessage()
 
     @Serializable
     @SerialName("ssh-sign")
@@ -92,7 +92,7 @@ fun rememberBleRequestsHandler(): BleServerState {
         bleServer.onDataReceived = { data ->
             val text = String(data, Charsets.UTF_8)
             when (val message = json.decodeFromString<ClientMessage>(text)) {
-                is ClientMessage.ListKeys -> {
+                is ClientMessage.ListSShKeys -> {
 
                 }
                 is ClientMessage.SshSign -> {
