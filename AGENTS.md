@@ -22,7 +22,7 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 - `src` is organized by CLI command, not by technical role. Each command gets its own module, and subcommands map to submodules inside it. Don't extract shared helpers into generic modules - keep logic colocated with the command it serves unless it is genuinely reused across commands.
 - `src/config.rs` loads the user's config.
-- `src/bluetooth.rs` manages the BLE connection to the mobile app: connects to a device, discovers the GATT service/characteristic, and provides `send_message` for request-response communication over Bluetooth.
+- `src/bluetooth.rs` manages the BLE connection to the mobile app.
 - `development` has development and debugging scripts.
 
 ## Project `./android-app`
