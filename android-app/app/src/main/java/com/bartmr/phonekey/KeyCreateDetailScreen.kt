@@ -39,6 +39,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -165,7 +166,26 @@ private fun CreateKeyForm(
     var userAuthRequired by remember { mutableStateOf(false) }
     var authValiditySeconds by remember { mutableStateOf("0") }
     var authType by remember { mutableStateOf(KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL) }
-    var aliasError by remember { mutableStateOf<String?>(null) }
+
+    val aliasError by remember {
+        derivedStateOf {
+            val trimmed = alias.trim()
+            when {
+                trimmed.isEmpty() -> "Alias must not be empty"
+                else -> null
+            }
+        }
+    }
+    val authValidityError by remember {
+        derivedStateOf {
+            if (!userAuthRequired) return@derivedStateOf null
+            val seconds = authValiditySeconds.toIntOrNull()
+            when {
+                seconds == null || seconds < 0 -> "Must be 0 or greater"
+                else -> null
+            }
+        }
+    }
 
     val algorithms = listOf(
         KeyProperties.KEY_ALGORITHM_EC,
@@ -245,10 +265,7 @@ private fun CreateKeyForm(
 
     OutlinedTextField(
         value = alias,
-        onValueChange = {
-            alias = it
-            aliasError = null
-        },
+        onValueChange = { alias = it },
         label = { Text("Alias") },
         isError = aliasError != null,
         supportingText = aliasError?.let { { Text(it) } },
@@ -407,6 +424,8 @@ private fun CreateKeyForm(
             value = authValiditySeconds,
             onValueChange = { authValiditySeconds = it },
             label = { Text("Timeout (seconds, 0 for every use)") },
+            isError = authValidityError != null,
+            supportingText = authValidityError?.let { { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -442,19 +461,10 @@ private fun CreateKeyForm(
     Spacer(Modifier.height(24.dp))
 
     Button(
+        enabled = aliasError == null && authValidityError == null && selectedPurposes != 0,
         onClick = {
             val trimmedAlias = alias.trim()
-            if (trimmedAlias.isEmpty()) {
-                aliasError = "Alias must not be empty"
-                return@Button
-            }
-            if (repository.keyExists(trimmedAlias)) {
-                aliasError = "Alias already exists"
-                return@Button
-            }
-            if (selectedPurposes == 0) {
-                return@Button
-            }
+            if (repository.keyExists(trimmedAlias)) return@Button
 
             val info = KeyInfo(
                 alias = trimmedAlias,
