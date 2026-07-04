@@ -9,7 +9,7 @@ use tokio::net::UnixListener;
 use tokio::sync::Mutex;
 use phone_key_cli::{bluetooth, config};
 
-const SOCKET_PATH: &str = "/tmp/phone-key-agent.sock";
+const SOCKET_PATH: &str = "/tmp/phone-key-ssh-agent.sock";
 
 #[derive(Deserialize)]
 struct IdentityResponse {
@@ -20,27 +20,46 @@ struct IdentityResponse {
 
 #[derive(Clone)]
 struct AppSession {
-    connection: Arc<Mutex<bluetooth::BluetoothConnection>>,
+    device_address: String,
+    connection: Arc<Mutex<Option<bluetooth::BluetoothConnection>>>,
     identities: Vec<(PublicCredential, String)>,
 }
 
 impl AppSession {
-    async fn new(config: &config::Config) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(config: &config::Config) -> Self {
         let device_address = config
             .device_address
-            .as_deref()
+            .clone()
             .expect("device_address not set in ~/.phone-key.json");
-        let connection = bluetooth::BluetoothConnection::connect(device_address).await?;
-        Ok(Self {
-            connection: Arc::new(Mutex::new(connection)),
+        Self {
+            device_address,
+            connection: Arc::new(Mutex::new(None)),
             identities: Vec::new(),
-        })
+        }
+    }
+
+    async fn get_connection(&self) -> Result<tokio::sync::MutexGuard<'_, Option<bluetooth::BluetoothConnection>>, AgentError> {
+        let mut guard = self.connection.lock().await;
+        if guard.is_none() {
+            *guard = Some(
+                bluetooth::BluetoothConnection::connect(&self.device_address)
+                    .await
+                    .map_err(|e| AgentError::other(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?,
+            );
+        }
+        Ok(guard)
     }
 
     async fn send_message(&self, json: &str) -> Result<Vec<u8>, AgentError> {
-        self.connection.lock().await.send_message(json).await.map_err(|e| {
-            AgentError::other(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
-        })
+        self.get_connection()
+            .await?
+            .as_mut()
+            .expect("connection just initialized")
+            .send_message(json)
+            .await
+            .map_err(|e| {
+                AgentError::other(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+            })
     }
 }
 
@@ -119,7 +138,7 @@ impl Session for AppSession {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::Config::load()?;
-    let session = AppSession::new(&config).await?;
+    let session = AppSession::new(&config);
 
     let _ = std::fs::remove_file(SOCKET_PATH);
 
