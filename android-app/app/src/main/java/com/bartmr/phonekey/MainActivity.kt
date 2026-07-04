@@ -18,7 +18,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,15 +32,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bartmr.phonekey.keystore.KeyStoreRepository
-import com.bartmr.phonekey.bluetooth.BleServer
+import com.bartmr.phonekey.bluetooth.rememberBleServer
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,29 +49,17 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-@Serializable
-sealed class ClientMessage {
-    @Serializable
-    @SerialName("sign")
-    data class SignRequest(val data: String) : ClientMessage()
-
-    @Serializable
-    @SerialName("get-public-key")
-    data object GetPublicKey : ClientMessage()
-}
-
-val json = Json { ignoreUnknownKeys = true }
-
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val repository = remember { KeyStoreRepository(context) }
 
-    val bleServer = remember { BleServer(context) }
     var permissionsGranted by remember { mutableStateOf(false) }
     var permissionsRequested by remember { mutableStateOf(false) }
-    var bluetoothEnabled by remember { mutableStateOf(bleServer.isAdapterEnabled()) }
+
+    val bleServerState = rememberBleServer()
+    val bluetoothEnabled = bleServerState.isBluetoothEnabled
 
     val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
@@ -101,68 +82,6 @@ fun AppNavHost() {
 
     LaunchedEffect(Unit) {
         permissionsLauncher.launch(permissions)
-    }
-
-    DisposableEffect(bleServer) {
-        bleServer.onAdapterStateChanged = { enabled ->
-            bluetoothEnabled = enabled
-
-            if (bluetoothEnabled) {
-                bleServer.startGattServer()
-            } else {
-                bleServer.stopGattServer()
-            }
-        }
-        bleServer.registerAdapterStateReceiver()
-        onDispose {
-            bleServer.unregisterAdapterStateReceiver()
-            bleServer.onAdapterStateChanged = null
-        }
-    }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> {
-                    if (!bluetoothEnabled) {
-                        return@LifecycleEventObserver;
-                    }
-
-                    bleServer.startGattServer()
-                }
-
-                Lifecycle.Event.ON_PAUSE -> {
-                    bleServer.stopGattServer()
-                }
-
-                else -> {}
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            bleServer.stopGattServer()
-        }
-    }
-
-    DisposableEffect(bleServer) {
-        bleServer.onDataReceived = { data ->
-            val text = String(data, Charsets.UTF_8)
-
-            when (val message = json.decodeFromString<ClientMessage>(text)) {
-                is ClientMessage.SignRequest -> {
-
-                }
-
-                is ClientMessage.GetPublicKey -> {
-
-                }
-            }
-        }
-        onDispose {
-            bleServer.onDataReceived = null
-        }
     }
 
     if (permissionsRequested && !permissionsGranted) {
