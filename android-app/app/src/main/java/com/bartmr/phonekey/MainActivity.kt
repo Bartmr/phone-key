@@ -38,7 +38,8 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContent {
             PhoneKeyTheme {
-                AppNavHost()
+                // AppNavHost()
+                BluetoothTestScreen()
             }
         }
     }

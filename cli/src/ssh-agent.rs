@@ -12,10 +12,11 @@ use phone_key_cli::{bluetooth, config};
 const SOCKET_PATH: &str = "/tmp/phone-key-ssh-agent.sock";
 
 #[derive(Deserialize)]
+
 struct IdentityResponse {
     alias: String,
-    #[serde(rename = "publicKey")]
-    public_key: String,
+    #[serde(rename = "publicKeyBase64")]
+    public_key_base64: String,
 }
 
 #[derive(Clone)]
@@ -38,7 +39,7 @@ impl AppSession {
         }
     }
 
-    async fn get_connection(&self) -> Result<tokio::sync::MutexGuard<'_, Option<bluetooth::BluetoothConnection>>, AgentError> {
+    async fn send_message(&self, json: &str) -> Result<Vec<u8>, AgentError> {
         let mut guard = self.connection.lock().await;
         if guard.is_none() {
             *guard = Some(
@@ -47,19 +48,23 @@ impl AppSession {
                     .map_err(|e| AgentError::other(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?,
             );
         }
-        Ok(guard)
-    }
 
-    async fn send_message(&self, json: &str) -> Result<Vec<u8>, AgentError> {
-        self.get_connection()
-            .await?
+        match guard
             .as_mut()
             .expect("connection just initialized")
             .send_message(json)
             .await
-            .map_err(|e| {
-                AgentError::other(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
-            })
+        {
+            Ok(response) => Ok(response),
+            Err(e) => {
+                // Dispose broken connection so next call creates a fresh one
+                *guard = None;
+                Err(AgentError::other(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                )))
+            }
+        }
     }
 }
 
@@ -80,7 +85,21 @@ impl Session for AppSession {
         self.identities.clear();
         let mut identities = Vec::new();
         for item in parsed {
-            let pk = PublicKey::from_openssh(&item.public_key).map_err(|e| {
+            let public_key_bytes = base64::engine::general_purpose::STANDARD
+                .decode(&item.public_key_base64)
+                .map_err(|e| {
+                    AgentError::other(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("failed to base64-decode public key for '{}': {e}", item.alias),
+                    ))
+                })?;
+            let public_key_str = String::from_utf8(public_key_bytes).map_err(|e| {
+                AgentError::other(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("invalid UTF-8 in public key for '{}': {e}", item.alias),
+                ))
+            })?;
+            let pk = PublicKey::from_openssh(&public_key_str).map_err(|e| {
                 AgentError::other(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     format!("invalid public key for '{}': {e}", item.alias),

@@ -24,6 +24,7 @@ pub enum Error {
     StreamEnded,
     EmptyResponse,
     Utf8(std::string::FromUtf8Error),
+    NotFound(String),
 }
 
 impl std::fmt::Display for Error {
@@ -34,6 +35,7 @@ impl std::fmt::Display for Error {
             Error::StreamEnded => write!(f, "notification stream ended unexpectedly"),
             Error::EmptyResponse => write!(f, "empty response received"),
             Error::Utf8(e) => write!(f, "UTF-8 error: {e}"),
+            Error::NotFound(msg) => write!(f, "{msg}"),
         }
     }
 }
@@ -56,19 +58,61 @@ impl BluetoothConnection {
             .parse()
             .expect("invalid Bluetooth address format");
         let device = adapter.device(addr)?;
+
+        // Pair if not already bonded.
+        let was_paired = device.is_paired().await?;
+        if !was_paired {
+            eprintln!("[bluetooth] device not paired — initiating pairing (check the Android device for a confirmation dialog)...");
+            device.pair().await?;
+            eprintln!("[bluetooth] pairing complete");
+        } else {
+            eprintln!("[bluetooth] device already paired");
+        }
+
+        // Trust is required on some BlueZ / Android combinations for encryption to succeed.
+        if !device.is_trusted().await? {
+            device.set_trusted(true).await?;
+            eprintln!("[bluetooth] device set as trusted");
+        }
+
+        // Show advertised service UUIDs before connecting (non-invasive check).
+        if let Some(uuids) = device.uuids().await? {
+            eprintln!("[bluetooth] advertised service UUIDs: {uuids:?}");
+            if !uuids.contains(&Uuid::from_str(SERVICE_UUID).unwrap()) {
+                eprintln!(
+                    "[bluetooth] WARNING: our service UUID is not in the advertisement — \
+                     is the Android app running and the GATT server started?"
+                );
+            }
+        } else {
+            eprintln!("[bluetooth] no advertised service UUIDs available (device may not have been scanned recently)");
+        }
+
+        eprintln!("[bluetooth] connecting...");
         device.connect().await?;
+        eprintln!(
+            "[bluetooth] connected: services_resolved={}",
+            device.is_services_resolved().await?
+        );
 
         let service_uuid = Uuid::from_str(SERVICE_UUID).expect("invalid service UUID");
         let char_uuid = Uuid::from_str(CHARACTERISTIC_UUID).expect("invalid characteristic UUID");
 
+        let services = device.services().await?;
+        eprintln!("[bluetooth] found {} GATT service(s)", services.len());
+
         let characteristic = {
             let mut found = None;
-            for service in device.services().await? {
-                if service.uuid().await? != service_uuid {
+            for service in &services {
+                let svc_uuid = service.uuid().await?;
+                eprintln!("[bluetooth]   service: {svc_uuid}");
+                if svc_uuid != service_uuid {
                     continue;
                 }
                 for char in service.characteristics().await? {
-                    if char.uuid().await? == char_uuid {
+                    let ch_uuid = char.uuid().await?;
+                    eprintln!("[bluetooth]     characteristic: {ch_uuid}");
+                    if ch_uuid == char_uuid {
                         found = Some(char);
                         break;
                     }
@@ -77,8 +121,17 @@ impl BluetoothConnection {
                     break;
                 }
             }
-            found.expect("characteristic not found on device")
+            found.ok_or_else(|| {
+                Error::NotFound(format!(
+                    "characteristic {CHARACTERISTIC_UUID} not found on device. \
+                     Found {count} service(s). \
+                     Make sure the Android app is in the foreground with the GATT server running.",
+                    count = services.len()
+                ))
+            })?
         };
+
+        eprintln!("[bluetooth] characteristic found, enabling notifications...");
 
         let notifications = Box::pin(characteristic.notify().await?)
             as Pin<Box<dyn Stream<Item = Vec<u8>> + Send>>;
@@ -105,7 +158,7 @@ impl BluetoothConnection {
 
         let notifications = self.notifications.clone();
         let response = tokio::time::timeout(
-            std::time::Duration::from_millis(5000),
+            std::time::Duration::from_millis(60000),
             async {
                 let mut buffer = Vec::new();
                 loop {

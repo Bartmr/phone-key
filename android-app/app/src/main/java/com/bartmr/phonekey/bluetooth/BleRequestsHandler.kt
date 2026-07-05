@@ -45,7 +45,7 @@ sealed class ClientMessage {
 }
 
 @Serializable
-data class IdentityResponse(val alias: String, val publicKey: String)
+data class IdentityResponse(val alias: String, val publicKeyBase64: String)
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -99,18 +99,22 @@ fun rememberBleRequestsHandler(
     DisposableEffect(bleServer) {
         bleServer.onAdapterStateChanged = { enabled ->
             bluetoothEnabled = enabled
-
-            if (bluetoothEnabled && permissionsGranted) {
-                bleServer.startGattServer()
-            } else {
-                bleServer.stopGattServer()
-            }
         }
         bleServer.registerAdapterStateReceiver()
         onDispose {
             bleServer.unregisterAdapterStateReceiver()
             bleServer.onAdapterStateChanged = null
         }
+    }
+
+    DisposableEffect(bluetoothEnabled, permissionsGranted) {
+        if (bluetoothEnabled && permissionsGranted) {
+            bleServer.startGattServer()
+        } else {
+            bleServer.stopGattServer()
+        }
+
+        onDispose {  }
     }
 
     val ssh = remember { Ssh(activity) }
@@ -125,7 +129,11 @@ fun rememberBleRequestsHandler(
                         val entry = ks.getEntry(alias, null) as? KeyStore.PrivateKeyEntry
                             ?: return@mapNotNull null
                         val publicKey = ssh.getPublicKey(entry)
-                        IdentityResponse(alias, publicKey)
+                        val publicKeyBase64 = Base64.encodeToString(
+                            publicKey.toByteArray(Charsets.UTF_8),
+                            Base64.NO_WRAP,
+                        )
+                        IdentityResponse(alias, publicKeyBase64)
                     }
                     val response = json.encodeToString(
                         ListSerializer(IdentityResponse.serializer()),

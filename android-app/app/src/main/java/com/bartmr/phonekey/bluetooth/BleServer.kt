@@ -151,11 +151,13 @@ class BleServer(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     fun stopGattServer() {
-        val callback = currentAdvertiseCallback
-        if (callback != null) {
-            advertiser?.stopAdvertising(callback)
+        val currentAdvertiseCallback = currentAdvertiseCallback
+
+        if (currentAdvertiseCallback != null) {
+            advertiser?.stopAdvertising(currentAdvertiseCallback)
         }
-        currentAdvertiseCallback = null
+
+        this.currentAdvertiseCallback = null
         advertiser = null
 
         serverManager?.close()

@@ -25,8 +25,9 @@ import com.bartmr.phonekey.bluetooth.BleServer
 @Composable
 fun BluetoothTestScreen() {
     val context = LocalContext.current
-    val bluetooth = remember { BleServer(context) }
-    var serverStarted by remember { mutableStateOf(false) }
+    val bleServer = remember { BleServer(context) }
+    var permissionsGranted by remember { mutableStateOf(false) }
+
 
     val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
@@ -44,8 +45,7 @@ fun BluetoothTestScreen() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         if (permissions.all { results[it] == true }) {
-            bluetooth.startGattServer()
-            serverStarted = true
+            permissionsGranted = true
         }
     }
 
@@ -53,38 +53,23 @@ fun BluetoothTestScreen() {
         permissionsLauncher.launch(permissions)
     }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> {
-                    // Server is started after permissions are granted
-                }
-
-                Lifecycle.Event.ON_PAUSE -> {
-                    bluetooth.stopGattServer()
-                    serverStarted = false
-                }
-
-                else -> {}
-            }
+    DisposableEffect( permissionsGranted) {
+        if (permissionsGranted) {
+            bleServer.startGattServer()
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            bluetooth.stopGattServer()
-        }
+
+        onDispose {  }
     }
 
-    DisposableEffect(bluetooth) {
+    DisposableEffect(bleServer) {
         val payload = ByteArray(4096) { (it % 256).toByte() }
 
-        bluetooth.onDataReceived = { data ->
+        bleServer.onDataReceived = { data ->
             Log.i("BluetoothTestScreen", "Received ${data.size} bytes: ${String(data, Charsets.UTF_8)}")
-            bluetooth.sendToClient(payload)
+            bleServer.sendToClient(payload)
         }
         onDispose {
-            bluetooth.onDataReceived = null
+            bleServer.onDataReceived = null
         }
     }
 
