@@ -6,7 +6,7 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::time::{sleep, timeout, Duration as TokioDuration};
+use tokio::time::{sleep, timeout};
 use uuid::Uuid;
 
 const SERVICE_UUID: &str = "a667f940-6a50-49ac-9b75-2b9639564972";
@@ -70,7 +70,7 @@ impl BluetoothConnection {
             eprintln!("[bluetooth] device already paired");
         }
 
-        let uuids = device.uuids().await?;
+        device.uuids().await?;
 
         // Wrap connect() in a timeout so it doesn't hang forever. BlueZ's
         // Device1.Connect D-Bus method has no built-in timeout.
