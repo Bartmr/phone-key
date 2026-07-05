@@ -1,6 +1,6 @@
 use bluer::gatt::remote::{Characteristic, CharacteristicWriteRequest};
 use bluer::gatt::WriteOp;
-use bluer::Device;
+use bluer::{Device};
 use futures::{Stream, StreamExt};
 use std::pin::Pin;
 use std::str::FromStr;
@@ -24,6 +24,7 @@ pub enum Error {
     StreamEnded,
     EmptyResponse,
     Utf8(std::string::FromUtf8Error),
+    NotFound(String),
 }
 
 impl std::fmt::Display for Error {
@@ -34,6 +35,7 @@ impl std::fmt::Display for Error {
             Error::StreamEnded => write!(f, "notification stream ended unexpectedly"),
             Error::EmptyResponse => write!(f, "empty response received"),
             Error::Utf8(e) => write!(f, "UTF-8 error: {e}"),
+            Error::NotFound(msg) => write!(f, "{msg}"),
         }
     }
 }
@@ -56,19 +58,42 @@ impl BluetoothConnection {
             .parse()
             .expect("invalid Bluetooth address format");
         let device = adapter.device(addr)?;
+
+        // Pair if not already bonded.
+        let was_paired = device.is_paired().await?;
+        if !was_paired {
+            eprintln!("[bluetooth] device not paired — initiating pairing (check the Android device for a confirmation dialog)...");
+            device.pair().await?;
+            eprintln!("[bluetooth] pairing complete");
+        } else {
+            eprintln!("[bluetooth] device already paired");
+        }
+
+        device.uuids().await?;
+
+        // Wrap connect() in a timeout so it doesn't hang forever. BlueZ's
+        // Device1.Connect D-Bus method has no built-in timeout.
+        eprintln!("[bluetooth] connecting...");
         device.connect().await?;
+        
 
         let service_uuid = Uuid::from_str(SERVICE_UUID).expect("invalid service UUID");
         let char_uuid = Uuid::from_str(CHARACTERISTIC_UUID).expect("invalid characteristic UUID");
 
+        let services = device.services().await?;
+
         let characteristic = {
             let mut found = None;
-            for service in device.services().await? {
-                if service.uuid().await? != service_uuid {
+            for service in &services {
+                let svc_uuid = service.uuid().await?;
+                eprintln!("[bluetooth]   service: {svc_uuid}");
+                if svc_uuid != service_uuid {
                     continue;
                 }
                 for char in service.characteristics().await? {
-                    if char.uuid().await? == char_uuid {
+                    let ch_uuid = char.uuid().await?;
+                    eprintln!("[bluetooth]     characteristic: {ch_uuid}");
+                    if ch_uuid == char_uuid {
                         found = Some(char);
                         break;
                     }
@@ -77,8 +102,17 @@ impl BluetoothConnection {
                     break;
                 }
             }
-            found.expect("characteristic not found on device")
+            found.ok_or_else(|| {
+                Error::NotFound(format!(
+                    "characteristic {CHARACTERISTIC_UUID} not found on device. \
+                     Found {count} service(s). \
+                     Make sure the Android app is in the foreground with the GATT server running.",
+                    count = services.len()
+                ))
+            })?
         };
+
+        eprintln!("[bluetooth] characteristic found, enabling notifications...");
 
         let notifications = Box::pin(characteristic.notify().await?)
             as Pin<Box<dyn Stream<Item = Vec<u8>> + Send>>;
@@ -105,7 +139,7 @@ impl BluetoothConnection {
 
         let notifications = self.notifications.clone();
         let response = tokio::time::timeout(
-            std::time::Duration::from_millis(5000),
+            std::time::Duration::from_millis(60000),
             async {
                 let mut buffer = Vec::new();
                 loop {
