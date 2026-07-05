@@ -116,10 +116,7 @@ class BleServer(private val context: Context) {
                     return
                 }
 
-                if (device.bondState != BOND_BONDED) {
-                    serverManager.rejectConnection(device)
-                    return
-                }
+
 
                 val bleManager = AppBleManager(context).apply {
                     useServer(serverManager)

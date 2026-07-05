@@ -62,7 +62,7 @@ fun BluetoothTestScreen() {
     }
 
     DisposableEffect(bleServer) {
-        val payload = ByteArray(4096) { (it % 256).toByte() }
+        val payload = "The quick brown fox jumps over the lazy dog. ".repeat(100).toByteArray(Charsets.UTF_8)
 
         bleServer.onDataReceived = { data ->
             Log.i("BluetoothTestScreen", "Received ${data.size} bytes: ${String(data, Charsets.UTF_8)}")

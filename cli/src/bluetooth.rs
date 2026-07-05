@@ -1,11 +1,12 @@
 use bluer::gatt::remote::{Characteristic, CharacteristicWriteRequest};
 use bluer::gatt::WriteOp;
-use bluer::Device;
+use bluer::{AdapterEvent, AddressType, Device, DiscoveryFilter};
 use futures::{Stream, StreamExt};
 use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio::time::{sleep, timeout, Duration as TokioDuration};
 use uuid::Uuid;
 
 const SERVICE_UUID: &str = "a667f940-6a50-49ac-9b75-2b9639564972";
@@ -69,37 +70,18 @@ impl BluetoothConnection {
             eprintln!("[bluetooth] device already paired");
         }
 
-        // Trust is required on some BlueZ / Android combinations for encryption to succeed.
-        if !device.is_trusted().await? {
-            device.set_trusted(true).await?;
-            eprintln!("[bluetooth] device set as trusted");
-        }
+        let uuids = device.uuids().await?;
 
-        // Show advertised service UUIDs before connecting (non-invasive check).
-        if let Some(uuids) = device.uuids().await? {
-            eprintln!("[bluetooth] advertised service UUIDs: {uuids:?}");
-            if !uuids.contains(&Uuid::from_str(SERVICE_UUID).unwrap()) {
-                eprintln!(
-                    "[bluetooth] WARNING: our service UUID is not in the advertisement — \
-                     is the Android app running and the GATT server started?"
-                );
-            }
-        } else {
-            eprintln!("[bluetooth] no advertised service UUIDs available (device may not have been scanned recently)");
-        }
-
+        // Wrap connect() in a timeout so it doesn't hang forever. BlueZ's
+        // Device1.Connect D-Bus method has no built-in timeout.
         eprintln!("[bluetooth] connecting...");
         device.connect().await?;
-        eprintln!(
-            "[bluetooth] connected: services_resolved={}",
-            device.is_services_resolved().await?
-        );
+        
 
         let service_uuid = Uuid::from_str(SERVICE_UUID).expect("invalid service UUID");
         let char_uuid = Uuid::from_str(CHARACTERISTIC_UUID).expect("invalid characteristic UUID");
 
         let services = device.services().await?;
-        eprintln!("[bluetooth] found {} GATT service(s)", services.len());
 
         let characteristic = {
             let mut found = None;

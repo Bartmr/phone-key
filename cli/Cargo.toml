@@ -15,7 +15,7 @@ path = "src/ssh-agent.rs"
 bluer = { version = "0.17", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
 uuid = { version = "1", features = ["v4"] }
 ssh-agent-lib = "0.6"
 base64 = "0.22"
