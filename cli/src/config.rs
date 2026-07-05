@@ -11,7 +11,7 @@ fn config_path() -> PathBuf {
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
-    #[serde(default)]
+    #[serde(rename = "deviceAddress")]
     pub device_address: Option<String>,
 }
 
