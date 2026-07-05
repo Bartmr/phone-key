@@ -1,12 +1,11 @@
 use bluer::gatt::remote::{Characteristic, CharacteristicWriteRequest};
 use bluer::gatt::WriteOp;
-use bluer::{AdapterEvent, AddressType, Device, DiscoveryFilter};
+use bluer::{Device};
 use futures::{Stream, StreamExt};
 use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::time::{sleep, timeout};
 use uuid::Uuid;
 
 const SERVICE_UUID: &str = "a667f940-6a50-49ac-9b75-2b9639564972";
