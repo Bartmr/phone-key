@@ -68,7 +68,7 @@ func ConnectUsb() (*UsbConnection, error) {
 
 func findAndActivateAOA(ctx *gousb.Context) (*gousb.Device, error) {
 	devs, err := ctx.OpenDevices(func(desc *gousb.DeviceDesc) bool {
-		return true
+		return desc.Vendor == 0x22d9 && desc.Product == 0x2769
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list USB devices: %w", err)

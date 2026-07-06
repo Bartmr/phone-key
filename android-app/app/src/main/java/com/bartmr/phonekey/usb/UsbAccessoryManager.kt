@@ -9,6 +9,7 @@ import android.hardware.usb.UsbAccessory
 import android.hardware.usb.UsbManager
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,7 @@ class UsbAccessoryManager(private val context: Context) {
     private var inputStream: FileInputStream? = null
     private var outputStream: FileOutputStream? = null
     private var fileDescriptor: ParcelFileDescriptor? = null
+    private var pendingAccessory: UsbAccessory? = null
     private val scope = CoroutineScope(Dispatchers.IO)
 
     var onDataReceived: ((ByteArray) -> Unit)? = null
@@ -46,6 +48,17 @@ class UsbAccessoryManager(private val context: Context) {
                     Log.i(TAG, "USB accessory detached")
                     closeAccessory()
                 }
+                ACTION_USB_PERMISSION -> {
+                    val accessory = pendingAccessory
+                    pendingAccessory = null
+                    if (accessory == null) return
+                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                        Log.i(TAG, "USB permission granted")
+                        connectToAccessory(accessory)
+                    } else {
+                        Log.w(TAG, "USB permission denied")
+                    }
+                }
             }
         }
     }
@@ -54,8 +67,14 @@ class UsbAccessoryManager(private val context: Context) {
         val filter = IntentFilter().apply {
             addAction(UsbManager.ACTION_USB_ACCESSORY_ATTACHED)
             addAction(UsbManager.ACTION_USB_ACCESSORY_DETACHED)
+            addAction(ACTION_USB_PERMISSION)
         }
-        context.registerReceiver(usbReceiver, filter)
+        ContextCompat.registerReceiver(
+            context,
+            usbReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
     fun handleIntent(intent: Intent) {
@@ -72,6 +91,7 @@ class UsbAccessoryManager(private val context: Context) {
 
     private fun openAccessory(accessory: UsbAccessory) {
         if (!usbManager.hasPermission(accessory)) {
+            pendingAccessory = accessory
             // Request permission — the system will show a dialog or grant automatically
             // if the accessory_filter.xml matches.
             val permissionIntent = PendingIntent.getBroadcast(
