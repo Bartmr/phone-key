@@ -58,6 +58,7 @@ impl BluetoothConnection {
             .parse()
             .expect("invalid Bluetooth address format");
         let device = adapter.device(addr)?;
+        
 
         // Pair if not already bonded.
         let was_paired = device.is_paired().await?;
@@ -73,12 +74,41 @@ impl BluetoothConnection {
         // Wrap connect() in a timeout so it doesn't hang forever. BlueZ's
         // Device1.Connect D-Bus method has no built-in timeout.
 
-        if !device.is_connected().await? {
-            device.connect().await?;
-        }
-        
+        if device.is_connected().await? {
+            
+            device.disconnect().await?;
+            eprintln!("[bluetooth] device disconnected first, to refresh services");
+            device.uuids().await?;
+            eprintln!("[bluetooth] device UUIDs refreshed");
 
-        device.uuids().await?;
+        }
+
+        device.connect().await?;
+
+        eprintln!("[bluetooth] device connected, waiting for services to resolve...");
+
+
+        // BLE service discovery runs asynchronously after connect(). We must
+        // wait until BlueZ has finished enumerating GATT services, otherwise
+        // device.services() returns an empty list for a freshly connected
+        // Android GATT-server device.
+        {
+            let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(10);
+            loop {
+                if device.is_services_resolved().await? {
+                    eprintln!("[bluetooth] services resolved");
+                    break;
+                }
+                if tokio::time::Instant::now() >= deadline {
+                    return Err(Error::NotFound(
+                        "services not resolved within 10 s after connect".into(),
+                    ));
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
+        }
+
+        eprintln!("[bluetooth] services resolved...");
 
         let service_uuid = Uuid::from_str(SERVICE_UUID).expect("invalid service UUID");
         let char_uuid = Uuid::from_str(CHARACTERISTIC_UUID).expect("invalid characteristic UUID");

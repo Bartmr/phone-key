@@ -105,10 +105,12 @@ fun rememberBleRequestsHandler(
     }
 
     DisposableEffect(bluetoothEnabled, permissionsGranted) {
-        if (bluetoothEnabled && permissionsGranted) {
-            bleServer.startGattServer()
-        } else {
-            bleServer.stopGattServer()
+        if (permissionsGranted) {
+            if (bluetoothEnabled) {
+                bleServer.startGattServer()
+            } else {
+                bleServer.stopGattServer()
+            }
         }
 
         onDispose {  }
