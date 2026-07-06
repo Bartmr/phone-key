@@ -69,17 +69,16 @@ impl BluetoothConnection {
             eprintln!("[bluetooth] device already paired");
         }
 
-        device.uuids().await?;
 
         // Wrap connect() in a timeout so it doesn't hang forever. BlueZ's
         // Device1.Connect D-Bus method has no built-in timeout.
 
-        if device.is_connected().await? {
-            eprintln!("[bluetooth] disconnecting to refresh services...");
-            device.disconnect().await?;
+        if !device.is_connected().await? {
+            device.connect().await?;
         }
         
-        device.connect().await?;
+
+        device.uuids().await?;
 
         let service_uuid = Uuid::from_str(SERVICE_UUID).expect("invalid service UUID");
         let char_uuid = Uuid::from_str(CHARACTERISTIC_UUID).expect("invalid characteristic UUID");

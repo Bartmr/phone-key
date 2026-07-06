@@ -29,8 +29,8 @@ class AppServerManager(context: Context) : BleServerManager(context) {
                   BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED,
           BluetoothGattDescriptor(
             CCCD_UUID,
-            BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED_MITM
-                    or BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED_MITM,
+            BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED
+                    or BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED,
           ),
         ),
       ),
