@@ -26,7 +26,7 @@ class AppBleManager(context: Context) : BleManager(context) {
       .split()
       .enqueue()
 
-    sendNotification(ch, ByteArray(0))
+    sendNotification(ch, byteArrayOf(0x02))
       .enqueue()
   }
 

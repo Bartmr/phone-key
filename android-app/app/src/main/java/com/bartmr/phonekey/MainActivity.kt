@@ -52,7 +52,7 @@ fun AppNavHost() {
     val repository = remember { KeyStoreRepository(context) }
 
     val bleRequestsHandler = rememberBleRequestsHandler(
-        repository = repository,
+        keyStoreRepository = repository,
         activity = context as FragmentActivity,
     )
     

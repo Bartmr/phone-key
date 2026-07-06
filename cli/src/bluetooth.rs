@@ -145,7 +145,7 @@ impl BluetoothConnection {
                 loop {
                     let chunk = notifications.lock().await.next().await
                         .ok_or(Error::StreamEnded)?;
-                    if chunk.is_empty() {
+                    if chunk == [0x02] {
                         break;
                     }
                     buffer.extend_from_slice(&chunk);

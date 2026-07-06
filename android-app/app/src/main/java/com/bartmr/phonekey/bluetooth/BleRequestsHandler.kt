@@ -16,9 +16,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bartmr.phonekey.keystore.KeyStoreRepository
 import com.bartmr.phonekey.ssh.SignResult
 import com.bartmr.phonekey.ssh.Ssh
@@ -59,7 +56,7 @@ class BleServerState(
 
 @Composable
 fun rememberBleRequestsHandler(
-    repository: KeyStoreRepository,
+    keyStoreRepository: KeyStoreRepository,
     activity: FragmentActivity,
 ): BleServerState {
 
@@ -125,7 +122,7 @@ fun rememberBleRequestsHandler(
             when (val message = json.decodeFromString<ClientMessage>(text)) {
                 is ClientMessage.RequestIdentities -> {
                     val ks = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
-                    val identities = repository.listAliases().mapNotNull { alias ->
+                    val identities = keyStoreRepository.listAliases().mapNotNull { alias ->
                         val entry = ks.getEntry(alias, null) as? KeyStore.PrivateKeyEntry
                             ?: return@mapNotNull null
                         val publicKey = ssh.getPublicKey(entry)
@@ -142,6 +139,7 @@ fun rememberBleRequestsHandler(
                     bleServer.sendToClient(response.toByteArray(Charsets.UTF_8))
                 }
                 is ClientMessage.SshSign -> {
+                    val keyInfo = keyStoreRepository.getKeyInfo(message.keyAlias)
                     val ks = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
                     val entry = ks.getEntry(message.keyAlias, null) as? KeyStore.PrivateKeyEntry
                     if (entry == null) {
@@ -149,7 +147,7 @@ fun rememberBleRequestsHandler(
                     } else {
                         val dataToSign = Base64.decode(message.data, Base64.DEFAULT)
                         coroutineScope.launch {
-                            when (val result = ssh.sign(entry, dataToSign)) {
+                            when (val result = ssh.sign(keyInfo,entry, dataToSign)) {
                                 is SignResult.Success ->
                                     bleServer.sendToClient(result.rawSignature)
                                 is SignResult.Error ->
