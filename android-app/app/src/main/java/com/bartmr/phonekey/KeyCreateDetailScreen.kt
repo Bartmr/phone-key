@@ -183,7 +183,6 @@ private fun CreateKeyForm(
             }
         }
     }
-    var authType by remember { mutableStateOf(KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL) }
     val aliasError by remember {
         derivedStateOf {
             val trimmed = alias.trim()
@@ -438,32 +437,6 @@ private fun CreateKeyForm(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-
-        Spacer(Modifier.height(8.dp))
-        Text("Authentication type", style = MaterialTheme.typography.labelLarge)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(
-                selected = authType == KeyProperties.AUTH_BIOMETRIC_STRONG,
-                onClick = { authType = KeyProperties.AUTH_BIOMETRIC_STRONG },
-            )
-            Text("Biometric only", modifier = Modifier.padding(start = 4.dp))
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(
-                selected = authType == KeyProperties.AUTH_DEVICE_CREDENTIAL,
-                onClick = { authType = KeyProperties.AUTH_DEVICE_CREDENTIAL },
-            )
-            Text("Device credential only", modifier = Modifier.padding(start = 4.dp))
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(
-                selected = authType == (KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL),
-                onClick = {
-                    authType = KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL
-                },
-            )
-            Text("Biometric or device credential", modifier = Modifier.padding(start = 4.dp))
-        }
     }
 
     Spacer(Modifier.height(24.dp))

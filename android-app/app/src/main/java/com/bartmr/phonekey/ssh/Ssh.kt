@@ -7,6 +7,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.bartmr.phonekey.keystore.KeyInfo
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.ASN1Integer
@@ -50,12 +51,21 @@ class Ssh(private val activity: FragmentActivity) {
         return toSshFormat(publicKey)
     }
 
-    suspend fun sign(key: KeyStore.PrivateKeyEntry, data: ByteArray): SignResult {
+    suspend fun sign(keyInfo: KeyInfo, key: KeyStore.PrivateKeyEntry, data: ByteArray): SignResult {
         val privateKey = key.privateKey
+
+        if (!keyInfo.userAuthenticationRequired) {
+            val signature = Signature.getInstance("SHA256withECDSA")
+            signature.initSign(privateKey)
+
+            signature.update(data)
+
+            val derSignature = signature.sign()
+            return SignResult.Success(derToRaw(derSignature))
+        }
 
         val signature = Signature.getInstance("SHA256withECDSA")
         signature.initSign(privateKey)
-
         val crypto = BiometricPrompt.CryptoObject(signature)
 
         return suspendCancellableCoroutine { continuation ->
