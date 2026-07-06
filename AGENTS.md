@@ -4,6 +4,7 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 ## Shared conventions
 
+- Group directories, files and code by what they do (feature, UI section or responsability), not by what they are technically.
 - Do not create generic directories like `utils`, `helpers`, `shared`, etc.
 - To keep the logic simple and easy to understand, minimize mutable state and side effects. Prefer pure functions that take inputs and return outputs.
 - do not create unnecessary functions, constants and variables. if code is not reused, just inline it.
