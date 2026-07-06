@@ -73,14 +73,20 @@ impl BluetoothConnection {
 
         // Wrap connect() in a timeout so it doesn't hang forever. BlueZ's
         // Device1.Connect D-Bus method has no built-in timeout.
-        eprintln!("[bluetooth] connecting...");
-        device.connect().await?;
+
+        if device.is_connected().await? {
+            eprintln!("[bluetooth] disconnecting to refresh services...");
+            device.disconnect().await?;
+        }
         
+        device.connect().await?;
 
         let service_uuid = Uuid::from_str(SERVICE_UUID).expect("invalid service UUID");
         let char_uuid = Uuid::from_str(CHARACTERISTIC_UUID).expect("invalid characteristic UUID");
 
+        eprintln!("[bluetooth] discovering services...");
         let services = device.services().await?;
+        eprintln!("[bluetooth] found {} service(s)", services.len());
 
         let characteristic = {
             let mut found = None;
@@ -103,12 +109,14 @@ impl BluetoothConnection {
                 }
             }
             found.ok_or_else(|| {
-                Error::NotFound(format!(
+                let msg = format!(
                     "characteristic {CHARACTERISTIC_UUID} not found on device. \
                      Found {count} service(s). \
                      Make sure the Android app is in the foreground with the GATT server running.",
                     count = services.len()
-                ))
+                );
+                eprintln!("[bluetooth] {msg}");
+                Error::NotFound(msg)
             })?
         };
 
@@ -117,6 +125,9 @@ impl BluetoothConnection {
         let notifications = Box::pin(characteristic.notify().await?)
             as Pin<Box<dyn Stream<Item = Vec<u8>> + Send>>;
         let notifications = Arc::new(Mutex::new(notifications));
+
+
+        eprintln!("[bluetooth] notifications enabled, connection established");
 
         Ok(Self {
             device,

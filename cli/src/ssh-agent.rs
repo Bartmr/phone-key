@@ -59,6 +59,7 @@ impl AppSession {
             Err(e) => {
                 // Dispose broken connection so next call creates a fresh one
                 *guard = None;
+                eprintln!("[ssh-agent] Bluetooth connection error: {e}.");
                 Err(AgentError::other(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     e.to_string(),
@@ -99,6 +100,7 @@ impl Session for AppSession {
                     format!("invalid UTF-8 in public key for '{}': {e}", item.alias),
                 ))
             })?;
+            eprintln!("{}", public_key_str);
             let pk = PublicKey::from_openssh(&public_key_str).map_err(|e| {
                 AgentError::other(std::io::Error::new(
                     std::io::ErrorKind::Other,
