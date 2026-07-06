@@ -117,7 +117,14 @@ class Ssh(private val activity: FragmentActivity) {
     private fun toSshFormat(publicKey: ECPublicKey): String {
         val keyParams = PublicKeyFactory.createKey(publicKey.encoded)
         val encoded = OpenSSHPublicKeyUtil.encodePublicKey(keyParams)
-        return String(encoded)
+        val base64 = android.util.Base64.encodeToString(encoded, android.util.Base64.NO_WRAP)
+        val algorithm = when (publicKey.params.curve.field.fieldSize) {
+            256 -> "ecdsa-sha2-nistp256"
+            384 -> "ecdsa-sha2-nistp384"
+            521 -> "ecdsa-sha2-nistp521"
+            else -> throw IllegalArgumentException("Unsupported EC curve size: ${publicKey.params.curve.field.fieldSize}")
+        }
+        return "$algorithm $base64"
     }
 
     private fun derToRaw(der: ByteArray): ByteArray {
