@@ -1,6 +1,6 @@
 This repository is a monorepo containing all the projects that make Phone Key.
 
-Phone Key is a mobile app that allows you to use your phone's hardware-backed security enclave (e.g. Trusted Execution Environment) just like a hardware key (e.g. YubiKey). It communicates with your computer through Bluetooth.
+Phone Key is a mobile app that allows you to use your phone's hardware-backed security enclave (e.g. Trusted Execution Environment) just like a hardware key (e.g. YubiKey). It communicates with your computer through USB (Android Open Accessory protocol).
 
 ## Shared conventions
 
@@ -12,18 +12,35 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 - do not type values with `any` or use unsafe type casts. Either validate the value at runtime with Zod or a JSON decoder, check the instance type and throw an explicit error, or type it as `unknown`.
 - Avoid ternaries inside other ternaries.
 
-## Project `./cli`
+## Project `./cli-go`
 
 ### Tech Stack
 
-- rust
-- bluer
+- Go
+- gousb (libusb binding)
+- golang.org/x/crypto/ssh/agent (SSH agent protocol)
 
 ### Files and directories
 
-- `src/config.rs` loads the user's config.
-- `src/bluetooth.rs` manages the BLE connection to the mobile app.
-- `development` has development and debugging scripts.
+- `src/config.go` loads the user's config from `~/.phone-key.json`.
+- `src/usb.go` manages the USB/AOA connection to the mobile app.
+- `src/ssh-agent.go` implements the SSH agent protocol, exposed via a Unix socket.
+- `src/main.go` entry point.
+- `development/test-usb/main.go` standalone USB echo test binary.
+- `development/test-ssh-list-identities.sh` tests SSH agent identity listing.
+- `development/test-ssh-sign.sh` tests SSH signing through the agent.
+- `build.sh` build script.
+- `99-phone-key.rules` udev rule for USB device access (copy to `/etc/udev/rules.d/`).
+
+### Building
+
+```sh
+./build.sh
+```
+
+This produces `build/main` (SSH agent) and `build/test-usb` (USB echo test).
+
+Requires `libusb-1.0-0-dev` installed. Udev rule must be installed once for USB device access.
 
 ## Project `./android-app`
 
@@ -32,13 +49,16 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 - Kotlin
 - Jetpack Compose
 - Material 3 (dynamic colors on Android 12+)
-- Nordic Semiconductor's Android BLE Library
+- Android USB Accessory API
 - Biometric API
 - Bouncy Castle (SSH key format)
 
 ### Packages
 
 - `com.bartmr.phonekey.ui` is for generic UI components, logic and design tokens.
+- `com.bartmr.phonekey.usb` manages the USB accessory connection.
+- `com.bartmr.phonekey.keystore` manages Android Keystore keys.
+- `com.bartmr.phonekey.ssh` handles SSH key formatting and signing.
 
 ### Files and directories
 

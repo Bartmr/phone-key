@@ -1,13 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-set -x
-
 export SSH_AUTH_SOCK=/tmp/phone-key-ssh-agent.sock
 
 STRING_TO_SIGN="Hello, this is a secure message signed by my SSH key!"
 NAMESPACE="my-application"
-SSH_PUBKEY="$HOME/.ssh/id_ed25519.pub" 
+SSH_PUBKEY="$HOME/.ssh/id_ed25519.pub"
+
+if [ ! -f "$SSH_PUBKEY" ]; then
+    echo "No SSH key at $SSH_PUBKEY. Generate one or point SSH_PUBKEY to an existing key."
+    exit 1
+fi
 
 SIGNATURE=$(echo -n "$STRING_TO_SIGN" | ssh-keygen -Y sign -n "$NAMESPACE" -f "$SSH_PUBKEY")
 

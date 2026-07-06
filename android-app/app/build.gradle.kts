@@ -49,7 +49,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.nordic.ble)
     implementation(libs.androidx.biometric)
     implementation(libs.bouncycastle)
     implementation(libs.kotlinx.serialization.json)

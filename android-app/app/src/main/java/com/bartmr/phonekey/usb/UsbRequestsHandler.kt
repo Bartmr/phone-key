@@ -1,19 +1,11 @@
-package com.bartmr.phonekey.bluetooth
+package com.bartmr.phonekey.usb
 
-import android.Manifest
-import android.os.Build
 import android.util.Base64
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import com.bartmr.phonekey.keystore.KeyStoreRepository
@@ -39,6 +31,11 @@ sealed class ClientMessage {
         val data: String,
     ) : ClientMessage()
 
+    @Serializable
+    @SerialName("echo")
+    data class Echo(
+        val payload: String,
+    ) : ClientMessage()
 }
 
 @Serializable
@@ -46,82 +43,33 @@ data class IdentityResponse(val alias: String, val publicKeyBase64: String)
 
 private val json = Json { ignoreUnknownKeys = true }
 
-class BleServerState(
-    val isBluetoothEnabled: Boolean,
-    val permissions: Array<String>,
-    val permissionsLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
-    val permissionsGranted: Boolean,
-    val permissionsRequested: Boolean,
-)
-
 @Composable
-fun rememberBleRequestsHandler(
+fun rememberUsbRequestsHandler(
     keyStoreRepository: KeyStoreRepository,
     activity: FragmentActivity,
-): BleServerState {
-
-
-    var permissionsGranted by remember { mutableStateOf(false) }
-    var permissionsRequested by remember { mutableStateOf(false) }
-
-    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_ADVERTISE,
-            Manifest.permission.BLUETOOTH_CONNECT,
-        )
-    } else {
-        arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        )
-    }
-
-    val permissionsLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        permissionsRequested = true
-        permissionsGranted = permissions.all { results[it] == true }
-    }
-
-    LaunchedEffect(Unit) {
-        permissionsLauncher.launch(permissions)
-    }
-
+): UsbAccessoryManager {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val bleServer = remember { BleServer(context) }
-    var bluetoothEnabled by remember { mutableStateOf(bleServer.isAdapterEnabled()) }
-
-    DisposableEffect(bleServer) {
-        bleServer.onAdapterStateChanged = { enabled ->
-            bluetoothEnabled = enabled
-        }
-        bleServer.registerAdapterStateReceiver()
-        onDispose {
-            bleServer.unregisterAdapterStateReceiver()
-            bleServer.onAdapterStateChanged = null
-        }
-    }
-
-    DisposableEffect(bluetoothEnabled, permissionsGranted) {
-        if (permissionsGranted) {
-            if (bluetoothEnabled) {
-                bleServer.startGattServer()
-            } else {
-                bleServer.stopGattServer()
-            }
-        }
-
-        onDispose {  }
-    }
-
+    val usbManager = remember { UsbAccessoryManager(context) }
     val ssh = remember { Ssh(activity) }
 
-    DisposableEffect(bleServer) {
-        bleServer.onDataReceived = { data ->
+    DisposableEffect(usbManager) {
+        usbManager.register()
+        onDispose { usbManager.unregister() }
+    }
+
+    LaunchedEffect(usbManager) {
+        usbManager.handleIntent(activity.intent)
+    }
+
+    DisposableEffect(usbManager) {
+        usbManager.onDataReceived = { data ->
             val text = String(data, Charsets.UTF_8)
             when (val message = json.decodeFromString<ClientMessage>(text)) {
+                is ClientMessage.Echo -> {
+                    usbManager.sendToClient(message.payload.toByteArray(Charsets.UTF_8))
+                }
                 is ClientMessage.RequestIdentities -> {
                     val ks = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
                     val identities = keyStoreRepository.listAliases().mapNotNull { alias ->
@@ -138,22 +86,22 @@ fun rememberBleRequestsHandler(
                         ListSerializer(IdentityResponse.serializer()),
                         identities,
                     )
-                    bleServer.sendToClient(response.toByteArray(Charsets.UTF_8))
+                    usbManager.sendToClient(response.toByteArray(Charsets.UTF_8))
                 }
                 is ClientMessage.SshSign -> {
                     val keyInfo = keyStoreRepository.getKeyInfo(message.keyAlias)
                     val ks = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
                     val entry = ks.getEntry(message.keyAlias, null) as? KeyStore.PrivateKeyEntry
                     if (entry == null) {
-                        bleServer.sendToClient(ByteArray(0))
+                        usbManager.sendToClient(ByteArray(0))
                     } else {
                         val dataToSign = Base64.decode(message.data, Base64.DEFAULT)
                         coroutineScope.launch {
-                            when (val result = ssh.sign(keyInfo,entry, dataToSign)) {
+                            when (val result = ssh.sign(keyInfo, entry, dataToSign)) {
                                 is SignResult.Success ->
-                                    bleServer.sendToClient(result.rawSignature)
+                                    usbManager.sendToClient(result.rawSignature)
                                 is SignResult.Error ->
-                                    bleServer.sendToClient(ByteArray(0))
+                                    usbManager.sendToClient(ByteArray(0))
                             }
                         }
                     }
@@ -161,15 +109,9 @@ fun rememberBleRequestsHandler(
             }
         }
         onDispose {
-            bleServer.onDataReceived = null
+            usbManager.onDataReceived = null
         }
     }
 
-    return BleServerState(
-        isBluetoothEnabled = bluetoothEnabled,
-        permissions = permissions,
-        permissionsLauncher = permissionsLauncher,
-        permissionsGranted = permissionsGranted,
-        permissionsRequested = permissionsRequested,
-    )
+    return usbManager
 }

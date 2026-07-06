@@ -1,34 +1,36 @@
 package com.bartmr.phonekey
 
-import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.compose.ui.unit.dp
 import com.bartmr.phonekey.keystore.KeyStoreRepository
-import com.bartmr.phonekey.bluetooth.rememberBleRequestsHandler
+import com.bartmr.phonekey.usb.UsbAccessoryManager
+import com.bartmr.phonekey.usb.rememberUsbRequestsHandler
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
 
 class MainActivity : AppCompatActivity() {
@@ -39,7 +41,6 @@ class MainActivity : AppCompatActivity() {
         setContent {
             PhoneKeyTheme {
                 AppNavHost()
-                // BluetoothTestScreen()
             }
         }
     }
@@ -50,61 +51,34 @@ fun AppNavHost() {
     val context = LocalContext.current
     val navController = rememberNavController()
     val repository = remember { KeyStoreRepository(context) }
+    val activity = context as FragmentActivity
 
-    val bleRequestsHandler = rememberBleRequestsHandler(
+    val usbManager = rememberUsbRequestsHandler(
         keyStoreRepository = repository,
-        activity = context as FragmentActivity,
+        activity = activity,
     )
-    
-    if (bleRequestsHandler.permissionsRequested && !bleRequestsHandler.permissionsGranted) {
+
+    val connectionState by usbManager.connectionState.collectAsState()
+
+    if (connectionState == UsbAccessoryManager.ConnectionState.DISCONNECTED) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Bluetooth permissions are required to encrypt and decrypt data.",
+                text = "Plug in your phone to use Phone Key.",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 32.dp),
             )
-            Button(
-                onClick = {
-                    bleRequestsHandler.permissionsLauncher.launch(bleRequestsHandler.permissions)
-                },
-                modifier = Modifier.padding(top = 16.dp),
-            ) {
-                Text("Grant Permissions")
-            }
-        }
-        return@AppNavHost
-    }
-
-    if (!bleRequestsHandler.isBluetoothEnabled) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surfaceContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = "Bluetooth is turned off. Turn it on to use Phone Key.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 32.dp),
-                )
-                Button(
-                    onClick = {
-                        context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
-                    },
-                    modifier = Modifier.padding(top = 16.dp),
-                ) {
-                    Text("Open Bluetooth Settings")
-                }
-            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Run the Phone Key CLI on your computer\nto connect via USB.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 32.dp),
+            )
         }
         return@AppNavHost
     }
