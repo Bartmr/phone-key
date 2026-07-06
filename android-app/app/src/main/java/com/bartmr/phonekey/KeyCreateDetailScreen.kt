@@ -171,7 +171,7 @@ private fun CreateKeyForm(
     var selectedEncryptionPaddings by remember { mutableStateOf(emptyList<String>()) }
     var selectedSignaturePaddings by remember { mutableStateOf(emptyList<String>()) }
     var selectedBlockModes by remember { mutableStateOf(emptyList<String>()) }
-    var userAuthRequired by remember { mutableStateOf(false) }
+    var userAuthRequired by remember { mutableStateOf(true) }
     var authValiditySeconds by remember { mutableStateOf("0") }
     val authValidityError by remember {
         derivedStateOf {
