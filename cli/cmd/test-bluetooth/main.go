@@ -64,19 +64,14 @@ func main() {
 	case r := <-resultCh:
 		if r.err != nil {
 			fmt.Fprintf(os.Stderr, "Error sending message: %v\n", r.err)
-			_ = conn.Disconnect()
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "Received %d bytes: %s\n", len(r.data), string(r.data))
 	case <-ctx.Done():
 		fmt.Fprintln(os.Stderr, "\nCtrl+C received, disconnecting...")
-		_ = conn.Disconnect()
 		fmt.Fprintln(os.Stderr, "Disconnected.")
 		return
 	}
 
-	if err := conn.Disconnect(); err != nil {
-		fmt.Fprintf(os.Stderr, "Disconnect error: %v\n", err)
-	}
 	fmt.Fprintln(os.Stderr, "Disconnected.")
 }

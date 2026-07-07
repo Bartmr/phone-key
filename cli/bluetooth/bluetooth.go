@@ -151,7 +151,7 @@ func (c *Connection) SendMessage(jsonStr string) ([]byte, error) {
 }
 
 // Disconnect tears down the BLE connection.
-func (c *Connection) Disconnect() error {
+func (c *Connection) Disconnect() {
 	fmt.Fprint(os.Stderr, "[bluetooth] disconnect...")
 
 	// UnwatchProperties blocks if nothing is reading from propCh,
@@ -164,14 +164,4 @@ func (c *Connection) Disconnect() error {
 
 	fmt.Fprint(os.Stderr, "[bluetooth] cancelled property watch, disconnecting device...")
 
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- c.device.Disconnect()
-	}()
-
-	err := <-errCh
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "[bluetooth] disconnect error: %v\n", err)
-	}
-	return err
 }
