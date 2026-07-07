@@ -40,20 +40,26 @@ sealed class ClientMessage {
         val data: String,
     ) : ClientMessage()
 
+    @Serializable
+    @SerialName("echo")
+    data class Echo(
+        val data: String,
+    ) : ClientMessage()
+
 }
 
 @Serializable
 data class IdentityResponse(val alias: String, val publicKeyBase64: String)
 
 sealed class CommandState {
-    data class RequestingIdentities() : CommandState()
+    data object RequestingIdentities : CommandState()
     data class Signing(val keyAlias: String) : CommandState()
 }
 
 @Serializable
 data class ErrorResponse(val error: String)
 
-private val json = Json { ignoreUnknownKeys = true }
+private val json = Json { ignoreUnknownKeys = true; classDiscriminator = "type" }
 
 class BleServerState(
     val isBluetoothEnabled: Boolean,
@@ -133,12 +139,13 @@ fun rememberBleRequestsHandler(
             val text = String(data, Charsets.UTF_8)
             val message = json.decodeFromString<ClientMessage>(text)
 
-            val commandState: CommandState = when (message) {
+            val commandState: CommandState? = when (message) {
                 is ClientMessage.RequestIdentities -> CommandState.RequestingIdentities
                 is ClientMessage.SshSign -> CommandState.Signing(message.keyAlias)
+                is ClientMessage.Echo -> null
             }
 
-            if (!currentCommand.compareAndSet(null, commandState)) {
+            if (commandState != null && !currentCommand.compareAndSet(null, commandState)) {
                 val busy = json.encodeToString(ErrorResponse.serializer(), ErrorResponse("busy"))
                 bleServer.sendToClient(device, busy.toByteArray(Charsets.UTF_8))
                 return@handler
@@ -180,6 +187,9 @@ fun rememberBleRequestsHandler(
                         }
                         currentCommand.set(null)
                     }
+                }
+                is ClientMessage.Echo -> {
+                    bleServer.sendToClient(device, message.data.toByteArray(Charsets.UTF_8))
                 }
             }
         }

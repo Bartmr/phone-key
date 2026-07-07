@@ -62,9 +62,7 @@ impl BluetoothConnection {
         let device = adapter.device(addr)?;
         
 
-
-        // Use dbus-send for Device1.Connect because BlueZ's D-Bus method
-        // has no built-in timeout and bluer's connect() can hang forever.
+        // Force service LTE discovery
         {
             let dbus_path_mac = device_address.replace(':', "_");
             let status = std::process::Command::new("dbus-send")

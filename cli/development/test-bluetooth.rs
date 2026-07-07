@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let large_payload = "X".repeat(2000);
     let message = serde_json::json!({
         "type": "echo",
-        "payload": large_payload
+        "data": large_payload
     })
     .to_string();
     println!("Sending {} bytes over BLE...", message.len());
