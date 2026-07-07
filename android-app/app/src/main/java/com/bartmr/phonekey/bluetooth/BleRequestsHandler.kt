@@ -119,7 +119,7 @@ fun rememberBleRequestsHandler(
     val ssh = remember { Ssh(activity) }
 
     DisposableEffect(bleServer) {
-        bleServer.onDataReceived = { data ->
+        bleServer.onDataReceived = { device, data ->
             val text = String(data, Charsets.UTF_8)
             when (val message = json.decodeFromString<ClientMessage>(text)) {
                 is ClientMessage.RequestIdentities -> {
@@ -138,22 +138,22 @@ fun rememberBleRequestsHandler(
                         ListSerializer(IdentityResponse.serializer()),
                         identities,
                     )
-                    bleServer.sendToClient(response.toByteArray(Charsets.UTF_8))
+                    bleServer.sendToClient(device, response.toByteArray(Charsets.UTF_8))
                 }
                 is ClientMessage.SshSign -> {
                     val keyInfo = keyStoreRepository.getKeyInfo(message.keyAlias)
                     val ks = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
                     val entry = ks.getEntry(message.keyAlias, null) as? KeyStore.PrivateKeyEntry
                     if (entry == null) {
-                        bleServer.sendToClient(ByteArray(0))
+                        bleServer.sendToClient(device, ByteArray(0))
                     } else {
                         val dataToSign = Base64.decode(message.data, Base64.DEFAULT)
                         coroutineScope.launch {
                             when (val result = ssh.sign(keyInfo,entry, dataToSign)) {
                                 is SignResult.Success ->
-                                    bleServer.sendToClient(result.rawSignature)
+                                    bleServer.sendToClient(device, result.rawSignature)
                                 is SignResult.Error ->
-                                    bleServer.sendToClient(ByteArray(0))
+                                    bleServer.sendToClient(device, ByteArray(0))
                             }
                         }
                     }

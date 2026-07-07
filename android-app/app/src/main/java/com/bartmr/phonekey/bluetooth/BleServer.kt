@@ -22,11 +22,11 @@ class BleServer(private val context: Context) {
         get() = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 
     private var serverManager: AppServerManager? = null
-    private var bleManager: AppBleManager? = null
+    private val bleManagers = mutableMapOf<String, AppBleManager>()
     private var advertiser: BluetoothLeAdvertiser? = null
     private var currentAdvertiseCallback: AdvertiseCallback? = null
 
-    var onDataReceived: ((ByteArray) -> Unit)? = null
+    var onDataReceived: ((BluetoothDevice, ByteArray) -> Unit)? = null
     var onAdapterStateChanged: ((Boolean) -> Unit)? = null
 
     private val adapterStateReceiver = object : BroadcastReceiver() {
@@ -111,27 +111,20 @@ class BleServer(private val context: Context) {
             }
 
             override fun onDeviceConnectedToServer(device: BluetoothDevice) {
-                if (bleManager != null) {
-                    serverManager.rejectConnection(device)
-                    return
-                }
-
-
-
+                Log.i(TAG, "Device connected to server: ${device.address}")
                 val bleManager = AppBleManager(context).apply {
                     useServer(serverManager)
                     attachClientConnection(device)
-                    onWrite { _, data ->
-                        onDataReceived?.invoke(data)
+                    onWrite { dev, data ->
+                        onDataReceived?.invoke(dev, data)
                     }
                 }
 
-                this@BleServer.bleManager = bleManager
+                bleManagers[device.address] = bleManager
             }
 
             override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
-                bleManager?.close()
-                bleManager = null
+                bleManagers.remove(device.address)?.close()
             }
         })
 
@@ -139,9 +132,9 @@ class BleServer(private val context: Context) {
         this.serverManager = serverManager
     }
 
-    fun sendToClient(data: ByteArray) {
-        val bleManager = this.bleManager
-            ?: throw IllegalStateException("No device connected")
+    fun sendToClient(device: BluetoothDevice, data: ByteArray) {
+        val bleManager = bleManagers[device.address]
+            ?: throw IllegalStateException("No connection for device ${device.address}")
 
         bleManager.sendToClient(data)
     }
@@ -156,6 +149,9 @@ class BleServer(private val context: Context) {
 
         this.currentAdvertiseCallback = null
         advertiser = null
+
+        bleManagers.values.forEach { it.close() }
+        bleManagers.clear()
 
         serverManager?.close()
         serverManager = null

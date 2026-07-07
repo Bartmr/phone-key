@@ -25,6 +25,7 @@ pub enum Error {
     EmptyResponse,
     Utf8(std::string::FromUtf8Error),
     NotFound(String),
+    Unknown(String)
 }
 
 impl std::fmt::Display for Error {
@@ -36,6 +37,7 @@ impl std::fmt::Display for Error {
             Error::EmptyResponse => write!(f, "empty response received"),
             Error::Utf8(e) => write!(f, "UTF-8 error: {e}"),
             Error::NotFound(msg) => write!(f, "{msg}"),
+            Error::Unknown(msg) => write!(f, "{msg}"),
         }
     }
 }
@@ -60,30 +62,33 @@ impl BluetoothConnection {
         let device = adapter.device(addr)?;
         
 
-        // Pair if not already bonded.
-        let was_paired = device.is_paired().await?;
-        if !was_paired {
-            eprintln!("[bluetooth] device not paired — initiating pairing (check the Android device for a confirmation dialog)...");
-            device.pair().await?;
-            eprintln!("[bluetooth] pairing complete");
-        } else {
-            eprintln!("[bluetooth] device already paired");
+
+        // Use dbus-send for Device1.Connect because BlueZ's D-Bus method
+        // has no built-in timeout and bluer's connect() can hang forever.
+        {
+            let dbus_path_mac = device_address.replace(':', "_");
+            let status = std::process::Command::new("dbus-send")
+                .args([
+                    "--system",
+                    "--print-reply",
+                    "--dest=org.bluez",
+                    &format!("/org/bluez/hci0/dev_{dbus_path_mac}"),
+                    "org.bluez.Device1.Connect",
+                ])
+                .status()
+                .map_err(|e| {
+                    let msg = format!("failed to run dbus-send for Device1.Connect: {e}");
+                    eprintln!("[bluetooth] {msg}");
+                    Error::Unknown(msg)
+                })?;
+            if !status.success() {
+                let msg = format!(
+                    "dbus-send Device1.Connect exited with {status}"
+                );
+                eprintln!("[bluetooth] {msg}");
+                return Err(Error::Unknown(msg));
+            }
         }
-
-
-        // Wrap connect() in a timeout so it doesn't hang forever. BlueZ's
-        // Device1.Connect D-Bus method has no built-in timeout.
-
-        if device.is_connected().await? {
-            
-            device.disconnect().await?;
-            eprintln!("[bluetooth] device disconnected first, to refresh services");
-            device.uuids().await?;
-            eprintln!("[bluetooth] device UUIDs refreshed");
-
-        }
-
-        device.connect().await?;
 
         eprintln!("[bluetooth] device connected, waiting for services to resolve...");
 
@@ -96,7 +101,6 @@ impl BluetoothConnection {
             let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(10);
             loop {
                 if device.is_services_resolved().await? {
-                    eprintln!("[bluetooth] services resolved");
                     break;
                 }
                 if tokio::time::Instant::now() >= deadline {
