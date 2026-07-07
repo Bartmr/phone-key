@@ -32,7 +32,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	largePayload := strings.Repeat("X", 2000)
+	largePayload := strings.Repeat("X", 5000)
 
 	messageJSON, err := json.Marshal(map[string]string{
 		"type": "echo",
@@ -43,7 +43,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Sending %d bytes over BLE...\n", len(messageJSON))
+	fmt.Fprintf(os.Stderr, "Sending %d bytes over BLE...\n", len(messageJSON))
 
 	// Create a context that cancels on SIGINT.
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT)
@@ -67,16 +67,16 @@ func main() {
 			_ = conn.Disconnect()
 			os.Exit(1)
 		}
-		fmt.Printf("Received %d bytes: %s\n", len(r.data), string(r.data))
+		fmt.Fprintf(os.Stderr, "Received %d bytes: %s\n", len(r.data), string(r.data))
 	case <-ctx.Done():
 		fmt.Fprintln(os.Stderr, "\nCtrl+C received, disconnecting...")
 		_ = conn.Disconnect()
-		fmt.Println("Disconnected.")
+		fmt.Fprintln(os.Stderr, "Disconnected.")
 		return
 	}
 
 	if err := conn.Disconnect(); err != nil {
 		fmt.Fprintf(os.Stderr, "Disconnect error: %v\n", err)
 	}
-	fmt.Println("Disconnected.")
+	fmt.Fprintln(os.Stderr, "Disconnected.")
 }

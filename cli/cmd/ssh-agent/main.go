@@ -35,8 +35,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("SSH agent listening on %s\n", socketPath)
-	fmt.Printf("export SSH_AUTH_SOCK=%s\n", socketPath)
+	fmt.Fprintf(os.Stderr, "SSH agent listening on %s\n", socketPath)
+	fmt.Fprintf(os.Stderr, "export SSH_AUTH_SOCK=%s\n", socketPath)
 
 	for {
 		conn, err := listener.Accept()

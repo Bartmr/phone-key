@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/godbus/dbus/v5"
 	"github.com/muka/go-bluetooth/bluez"
 	"github.com/muka/go-bluetooth/bluez/profile/adapter"
 	"github.com/muka/go-bluetooth/bluez/profile/device"
@@ -33,22 +32,6 @@ func Connect(deviceAddress string) (*Connection, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create device: %w", err)
 	}
-
-	dbusConn, err := dbus.SystemBus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to system D-Bus: %w", err)
-	}
-
-	// Force service LTE discovery
-	macUnderscore := strings.ReplaceAll(deviceAddress, ":", "_")
-	devicePath := dbus.ObjectPath(fmt.Sprintf("/org/bluez/hci0/dev_%s", macUnderscore))
-	deviceObj := dbusConn.Object("org.bluez", devicePath)
-
-	call := deviceObj.Call("org.bluez.Device1.Connect", 0)
-	if call.Err != nil {
-		return nil, fmt.Errorf("org.bluez.Device1.Connect failed: %w", call.Err)
-	}
-	// ---
 
 	err = dev.Connect()
 	if err != nil {
@@ -134,7 +117,7 @@ func Connect(deviceAddress string) (*Connection, error) {
 // as the Rust implementation). The function returns the accumulated payload
 // without the delimiter.
 func (c *Connection) SendMessage(jsonStr string) ([]byte, error) {
-	err := c.char.WriteValue([]byte(jsonStr), map[string]interface{}{})
+	err := c.char.WriteValue([]byte(jsonStr), map[string]interface{}{"type": "reliable"})
 	if err != nil {
 		return nil, fmt.Errorf("GATT write failed: %w", err)
 	}
@@ -169,6 +152,26 @@ func (c *Connection) SendMessage(jsonStr string) ([]byte, error) {
 
 // Disconnect tears down the BLE connection.
 func (c *Connection) Disconnect() error {
+	fmt.Fprint(os.Stderr, "[bluetooth] disconnect...")
+
+	// UnwatchProperties blocks if nothing is reading from propCh,
+	// so drain it in a goroutine to unblock the teardown.
+	go func() {
+		for range c.propCh {
+		}
+	}()
 	c.cancelWatch()
-	return c.device.Disconnect()
+
+	fmt.Fprint(os.Stderr, "[bluetooth] cancelled property watch, disconnecting device...")
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- c.device.Disconnect()
+	}()
+
+	err := <-errCh
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[bluetooth] disconnect error: %v\n", err)
+	}
+	return err
 }
