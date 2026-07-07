@@ -25,6 +25,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.security.KeyStore
+import java.util.concurrent.atomic.AtomicReference
 
 @Serializable
 sealed class ClientMessage {
@@ -43,6 +44,14 @@ sealed class ClientMessage {
 
 @Serializable
 data class IdentityResponse(val alias: String, val publicKeyBase64: String)
+
+sealed class CommandState {
+    data class RequestingIdentities() : CommandState()
+    data class Signing(val keyAlias: String) : CommandState()
+}
+
+@Serializable
+data class ErrorResponse(val error: String)
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -117,12 +126,27 @@ fun rememberBleRequestsHandler(
     }
 
     val ssh = remember { Ssh(activity) }
+    val currentCommand = remember { AtomicReference<CommandState?>(null) }
 
     DisposableEffect(bleServer) {
-        bleServer.onDataReceived = { device, data ->
+        bleServer.onDataReceived = handler@{ device, data ->
             val text = String(data, Charsets.UTF_8)
-            when (val message = json.decodeFromString<ClientMessage>(text)) {
+            val message = json.decodeFromString<ClientMessage>(text)
+
+            val commandState: CommandState = when (message) {
+                is ClientMessage.RequestIdentities -> CommandState.RequestingIdentities
+                is ClientMessage.SshSign -> CommandState.Signing(message.keyAlias)
+            }
+
+            if (!currentCommand.compareAndSet(null, commandState)) {
+                val busy = json.encodeToString(ErrorResponse.serializer(), ErrorResponse("busy"))
+                bleServer.sendToClient(device, busy.toByteArray(Charsets.UTF_8))
+                return@handler
+            }
+
+            when (message) {
                 is ClientMessage.RequestIdentities -> {
+                    
                     val ks = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
                     val identities = keyStoreRepository.listAliases().mapNotNull { alias ->
                         val entry = ks.getEntry(alias, null) as? KeyStore.PrivateKeyEntry
@@ -139,23 +163,22 @@ fun rememberBleRequestsHandler(
                         identities,
                     )
                     bleServer.sendToClient(device, response.toByteArray(Charsets.UTF_8))
+                    currentCommand.set(null)
                 }
                 is ClientMessage.SshSign -> {
                     val keyInfo = keyStoreRepository.getKeyInfo(message.keyAlias)
                     val ks = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
                     val entry = ks.getEntry(message.keyAlias, null) as? KeyStore.PrivateKeyEntry
-                    if (entry == null) {
-                        bleServer.sendToClient(device, ByteArray(0))
-                    } else {
-                        val dataToSign = Base64.decode(message.data, Base64.DEFAULT)
-                        coroutineScope.launch {
-                            when (val result = ssh.sign(keyInfo,entry, dataToSign)) {
-                                is SignResult.Success ->
-                                    bleServer.sendToClient(device, result.rawSignature)
-                                is SignResult.Error ->
-                                    bleServer.sendToClient(device, ByteArray(0))
-                            }
+                        ?: throw IllegalStateException("Key entry not found for alias: ${message.keyAlias}")
+                    val dataToSign = Base64.decode(message.data, Base64.DEFAULT)
+                    coroutineScope.launch {
+                        when (val result = ssh.sign(keyInfo, entry, dataToSign)) {
+                            is SignResult.Success ->
+                                bleServer.sendToClient(device, result.rawSignature)
+                            is SignResult.Error ->
+                                bleServer.sendToClient(device, ByteArray(0))
                         }
+                        currentCommand.set(null)
                     }
                 }
             }
