@@ -4,7 +4,7 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 ## Shared conventions
 
-- Group directories, files and code by what they do (feature, UI section or responsability), not by what they are technically.
+- Group directories, files and code by what they do (feature, UI section, command or responsability), not by what they are technically.
 - Do not create generic directories like `utils`, `helpers`, `shared`, etc.
 - To keep the logic simple and easy to understand, minimize mutable state and side effects. Prefer pure functions that take inputs and return outputs.
 - do not create unnecessary functions, constants and variables. if code is not reused, just inline it.
@@ -16,14 +16,13 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 
 ### Tech Stack
 
-- rust
-- bluer
+- Go
+- tinyb (Bluetooth LE via BlueZ D-Bus API)
 
-### Files and directories
+### Important files and directories
 
-- `src/config.rs` loads the user's config.
-- `src/bluetooth.rs` manages the BLE connection to the mobile app.
-- `development` has development and debugging scripts.
+- `bluetooth/bluetooth.go` manages the BLE connection to the mobile app.
+- `config/config.go` loads the user's config.
 
 ## Project `./android-app`
 
@@ -36,10 +35,10 @@ Phone Key is a mobile app that allows you to use your phone's hardware-backed se
 - Biometric API
 - Bouncy Castle (SSH key format)
 
-### Packages
+### Important packages
 
 - `com.bartmr.phonekey.ui` is for generic UI components, logic and design tokens.
 
-### Files and directories
+### Important files and directories
 
 - `docs` documents the API protocol for communicating with the mobile app.
