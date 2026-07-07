@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/godbus/dbus/v5"
 	"github.com/muka/go-bluetooth/bluez"
 	"github.com/muka/go-bluetooth/bluez/profile/adapter"
 	"github.com/muka/go-bluetooth/bluez/profile/device"
@@ -33,10 +34,28 @@ func Connect(deviceAddress string) (*Connection, error) {
 		return nil, fmt.Errorf("failed to create device: %w", err)
 	}
 
-	err = dev.Connect()
+	// err = dev.Connect()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to connect: %w", err)
+	// }
+
+	// Force service LTE discovery
+
+	dbusConn, err := dbus.SystemBus()
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect: %w", err)
+		return nil, fmt.Errorf("failed to connect to system D-Bus: %w", err)
 	}
+
+	macUnderscore := strings.ReplaceAll(deviceAddress, ":", "_")
+	devicePath := dbus.ObjectPath(fmt.Sprintf("/org/bluez/hci0/dev_%s", macUnderscore))
+	deviceObj := dbusConn.Object("org.bluez", devicePath)
+
+	call := deviceObj.Call("org.bluez.Device1.Connect", 0)
+	if call.Err != nil {
+		return nil, fmt.Errorf("org.bluez.Device1.Connect failed: %w", call.Err)
+	}
+
+	// ---
 
 	fmt.Fprintln(os.Stderr, "[bluetooth] device connected, waiting for services to resolve...")
 
