@@ -1,4 +1,4 @@
-package com.bartmr.phonekey
+package com.bartmr.phonekey.keycreatedetail
 
 import android.security.keystore.KeyProperties
 import android.widget.Toast

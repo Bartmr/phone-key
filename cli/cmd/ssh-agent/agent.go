@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 
-	"phone-key-cli/bluetooth"
+	"phone-key-cli/internal/bluetooth"
 )
 
 // identityResponse matches the JSON the phone sends for each identity.

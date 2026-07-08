@@ -9,8 +9,8 @@ import (
 	"strings"
 	"syscall"
 
-	"phone-key-cli/bluetooth"
-	"phone-key-cli/config"
+	"phone-key-cli/internal/bluetooth"
+	"phone-key-cli/internal/config"
 )
 
 func main() {

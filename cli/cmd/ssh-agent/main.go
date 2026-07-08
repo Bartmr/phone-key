@@ -7,7 +7,7 @@ import (
 
 	sshagent "golang.org/x/crypto/ssh/agent"
 
-	"phone-key-cli/config"
+	"phone-key-cli/internal/config"
 )
 
 const socketPath = "/tmp/phone-key-ssh-agent.sock"
