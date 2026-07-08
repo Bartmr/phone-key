@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.bluetoothtest
+package com.bartmr.phonekey.screens.bluetoothtest
 
 import android.Manifest
 import android.os.Build

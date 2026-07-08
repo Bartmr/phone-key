@@ -30,8 +30,8 @@ import androidx.compose.ui.unit.dp
 import com.bartmr.phonekey.keystore.KeyStoreRepository
 import com.bartmr.phonekey.bluetooth.rememberBleRequestsHandler
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
-import com.bartmr.phonekey.keylist.KeyListScreen
-import com.bartmr.phonekey.keycreatedetail.KeyCreateDetailScreen
+import com.bartmr.phonekey.screens.keylist.KeyListScreen
+import com.bartmr.phonekey.screens.keycreatedetail.KeyCreateDetailScreen
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

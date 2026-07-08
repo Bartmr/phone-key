@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.keycreatedetail
+package com.bartmr.phonekey.screens.keycreatedetail
 
 import android.security.keystore.KeyProperties
 import android.widget.Toast
@@ -19,7 +19,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -30,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -43,8 +41,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,7 +58,6 @@ import com.bartmr.phonekey.keystore.toDisplayNames
 import com.bartmr.phonekey.keystore.BLOCK_MODE_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.DIGEST_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.ENCRYPTION_PADDING_DISPLAY_NAMES
-import com.bartmr.phonekey.keystore.ORIGIN_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.PURPOSE_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.SIGNATURE_PADDING_DISPLAY_NAMES
 
