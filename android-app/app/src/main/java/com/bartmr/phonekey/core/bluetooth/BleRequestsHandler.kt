@@ -25,6 +25,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.security.KeyStore
+import java.security.interfaces.ECPublicKey
 import java.util.concurrent.atomic.AtomicReference
 
 @Serializable
@@ -153,11 +154,11 @@ fun rememberBleRequestsHandler(
 
             when (message) {
                 is ClientMessage.RequestIdentities -> {
-                    
                     val ks = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
                     val identities = keyStoreRepository.listAliases().mapNotNull { alias ->
                         val entry = ks.getEntry(alias, null) as? KeyStore.PrivateKeyEntry
                             ?: return@mapNotNull null
+                        if (entry.certificate.publicKey !is ECPublicKey) return@mapNotNull null
                         val publicKey = ssh.getPublicKey(entry)
                         val publicKeyBase64 = Base64.encodeToString(
                             publicKey.toByteArray(Charsets.UTF_8),
