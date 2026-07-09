@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.bluetooth
+package com.bartmr.phonekey.core.bluetooth
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGattCharacteristic

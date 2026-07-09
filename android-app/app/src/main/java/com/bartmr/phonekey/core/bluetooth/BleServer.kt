@@ -1,9 +1,8 @@
-package com.bartmr.phonekey.bluetooth
+package com.bartmr.phonekey.core.bluetooth
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothDevice.BOND_BONDED
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData

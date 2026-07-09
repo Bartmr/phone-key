@@ -16,10 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.bartmr.phonekey.bluetooth.BleServer
+import com.bartmr.phonekey.core.bluetooth.BleServer
 
 
 @Composable

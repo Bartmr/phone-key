@@ -27,9 +27,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.compose.ui.unit.dp
-import com.bartmr.phonekey.keystore.KeyStoreRepository
-import com.bartmr.phonekey.bluetooth.rememberBleRequestsHandler
-import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
+import com.bartmr.phonekey.core.keystore.KeyStoreRepository
+import com.bartmr.phonekey.core.bluetooth.rememberBleRequestsHandler
+import com.bartmr.phonekey.core.ui.theme.PhoneKeyTheme
 import com.bartmr.phonekey.screens.keylist.KeyListScreen
 import com.bartmr.phonekey.screens.keycreatedetail.KeyCreateDetailScreen
 

@@ -1,13 +1,11 @@
-package com.bartmr.phonekey.ssh
+package com.bartmr.phonekey.core.ssh
 
-import android.os.Build
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
+import android.util.Base64
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import com.bartmr.phonekey.keystore.KeyInfo
+import com.bartmr.phonekey.core.keystore.KeyInfo
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.ASN1Integer
@@ -15,7 +13,6 @@ import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.crypto.util.OpenSSHPublicKeyUtil
 import org.bouncycastle.crypto.util.PublicKeyFactory
 import org.bouncycastle.util.BigIntegers
-import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.Signature
 import java.security.interfaces.ECPublicKey
@@ -117,7 +114,7 @@ class Ssh(private val activity: FragmentActivity) {
     private fun toSshFormat(publicKey: ECPublicKey): String {
         val keyParams = PublicKeyFactory.createKey(publicKey.encoded)
         val encoded = OpenSSHPublicKeyUtil.encodePublicKey(keyParams)
-        val base64 = android.util.Base64.encodeToString(encoded, android.util.Base64.NO_WRAP)
+        val base64 = Base64.encodeToString(encoded, Base64.NO_WRAP)
         val algorithm = when (publicKey.params.curve.field.fieldSize) {
             256 -> "ecdsa-sha2-nistp256"
             384 -> "ecdsa-sha2-nistp384"

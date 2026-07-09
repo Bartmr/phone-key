@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.ui.theme
+package com.bartmr.phonekey.core.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
