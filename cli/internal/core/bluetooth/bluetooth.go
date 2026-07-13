@@ -34,10 +34,14 @@ func Connect(deviceAddress string) (*Connection, error) {
 		return nil, fmt.Errorf("failed to create device: %w", err)
 	}
 
-	// err = dev.Connect()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to connect: %w", err)
-	// }
+	dev_connected, err := dev.GetConnected()
+
+	if !dev_connected {
+		err = dev.Connect()
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect: %w", err)
+		}
+	}
 
 	// Force service LTE discovery
 
