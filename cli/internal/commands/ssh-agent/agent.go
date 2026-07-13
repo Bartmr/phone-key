@@ -59,16 +59,9 @@ func (a *PhoneKeyAgent) getConn() (*bluetooth.Connection, error) {
 // sendMessage sends a JSON message over Bluetooth and returns the raw response.
 // On error, the cached connection is discarded so the next call creates a fresh one.
 func (a *PhoneKeyAgent) sendMessage(jsonStr string) ([]byte, error) {
-	a.mu.Lock()
-	conn := a.conn
-	a.mu.Unlock()
-
-	if conn == nil {
-		var err error
-		conn, err = a.getConn()
-		if err != nil {
-			return nil, err
-		}
+	conn, err := a.getConn()
+	if err != nil {
+		return nil, err
 	}
 
 	response, err := conn.SendMessage(jsonStr)
@@ -101,6 +94,7 @@ func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
 	a.mu.Unlock()
 
 	var keys []*agent.Key
+	var entries []identityEntry
 	for _, item := range parsed {
 		publicKeyBytes, err := base64.StdEncoding.DecodeString(item.PublicKeyBase64)
 		if err != nil {
@@ -126,10 +120,12 @@ func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
 			Comment: item.Alias,
 		})
 
-		a.mu.Lock()
-		a.identities = append(a.identities, identityEntry{key: pk, alias: item.Alias})
-		a.mu.Unlock()
+		entries = append(entries, identityEntry{key: pk, alias: item.Alias})
 	}
+
+	a.mu.Lock()
+	a.identities = entries
+	a.mu.Unlock()
 
 	return keys, nil
 }
