@@ -223,29 +223,6 @@ private fun CreateKeyForm(
     val showDigests = selectedAlgorithm == KeyProperties.KEY_ALGORITHM_EC ||
             selectedAlgorithm == KeyProperties.KEY_ALGORITHM_RSA
     val showBlockModes = selectedAlgorithm == KeyProperties.KEY_ALGORITHM_AES
-    val isSymmetric = selectedAlgorithm == KeyProperties.KEY_ALGORITHM_AES ||
-            selectedAlgorithm == "HMAC"
-
-    fun onAlgorithmChanged(newAlgorithm: String) {
-        selectedAlgorithm = newAlgorithm
-
-        val (defaultSize, defaultPurposes) = when (newAlgorithm) {
-            KeyProperties.KEY_ALGORITHM_RSA -> 2048 to KeyProperties.PURPOSE_SIGN
-            KeyProperties.KEY_ALGORITHM_EC -> 256 to KeyProperties.PURPOSE_SIGN
-            KeyProperties.KEY_ALGORITHM_AES -> 256 to KeyProperties.PURPOSE_ENCRYPT
-            else -> 256 to KeyProperties.PURPOSE_SIGN
-        }
-        selectedKeySize = defaultSize
-        selectedPurposes = defaultPurposes
-        selectedDigests = emptyList()
-        selectedEncryptionPaddings = emptyList()
-        selectedSignaturePaddings = emptyList()
-        selectedBlockModes = emptyList()
-
-        if (newAlgorithm == KeyProperties.KEY_ALGORITHM_EC || newAlgorithm == KeyProperties.KEY_ALGORITHM_RSA) {
-            selectedDigests = selectedDigests + KeyProperties.DIGEST_SHA256
-        }
-    }
 
     Spacer(Modifier.height(16.dp))
 
@@ -255,7 +232,26 @@ private fun CreateKeyForm(
         algorithms.forEachIndexed { index, algo ->
             SegmentedButton(
                 selected = selectedAlgorithm == algo,
-                onClick = { onAlgorithmChanged(algo) },
+                onClick = {
+                    selectedAlgorithm = algo
+
+                    val (defaultSize, defaultPurposes) = when (algo) {
+                        KeyProperties.KEY_ALGORITHM_RSA -> 2048 to KeyProperties.PURPOSE_SIGN
+                        KeyProperties.KEY_ALGORITHM_EC -> 256 to KeyProperties.PURPOSE_SIGN
+                        KeyProperties.KEY_ALGORITHM_AES -> 256 to KeyProperties.PURPOSE_ENCRYPT
+                        else -> 256 to KeyProperties.PURPOSE_SIGN
+                    }
+                    selectedKeySize = defaultSize
+                    selectedPurposes = defaultPurposes
+                    selectedDigests = emptyList()
+                    selectedEncryptionPaddings = emptyList()
+                    selectedSignaturePaddings = emptyList()
+                    selectedBlockModes = emptyList()
+
+                    if (algo == KeyProperties.KEY_ALGORITHM_EC || algo == KeyProperties.KEY_ALGORITHM_RSA) {
+                        selectedDigests = selectedDigests + KeyProperties.DIGEST_SHA256
+                    }
+                },
                 shape = SegmentedButtonDefaults.itemShape(index, algorithms.size),
             ) {
                 Text(algo)

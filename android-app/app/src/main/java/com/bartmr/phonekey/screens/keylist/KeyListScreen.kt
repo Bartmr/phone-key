@@ -37,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import android.net.Uri
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -54,17 +53,13 @@ fun KeyListScreen(
     val keys = remember { mutableStateListOf<KeyInfo>() }
     var deleteConfirmAlias by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
-        val aliases = repository.listAliases()
-        keys.clear()
-        keys.addAll(aliases.map { repository.getKeyInfo(it) })
-    }
-
     fun refreshKeys() {
         val aliases = repository.listAliases()
         keys.clear()
         keys.addAll(aliases.map { repository.getKeyInfo(it) })
     }
+
+    LaunchedEffect(Unit) { refreshKeys() }
 
     Scaffold(
         topBar = {
@@ -149,8 +144,6 @@ private fun KeyListItem(
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val icon: ImageVector = Icons.Default.Lock
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -163,7 +156,7 @@ private fun KeyListItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(icon, contentDescription = keyInfo.algorithm)
+            Icon(Icons.Default.Lock, contentDescription = keyInfo.algorithm)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
