@@ -50,6 +50,11 @@ class Ssh(private val activity: FragmentActivity) {
 
     suspend fun sign(keyInfo: KeyInfo, key: KeyStore.PrivateKeyEntry, data: ByteArray): SignResult {
         val privateKey = key.privateKey
+        val publicKey = key.certificate.publicKey
+        require(publicKey is ECPublicKey) {
+            "Expected ECPublicKey, got ${publicKey::class.simpleName}"
+        }
+        val fieldSizeBytes = (publicKey.params.curve.field.fieldSize + 7) / 8
 
         if (!keyInfo.userAuthenticationRequired) {
             val signature = Signature.getInstance("SHA256withECDSA")
@@ -58,7 +63,7 @@ class Ssh(private val activity: FragmentActivity) {
             signature.update(data)
 
             val derSignature = signature.sign()
-            return SignResult.Success(derToRaw(derSignature))
+            return SignResult.Success(derToRaw(derSignature, fieldSizeBytes))
         }
 
         val signature = Signature.getInstance("SHA256withECDSA")
@@ -80,7 +85,7 @@ class Ssh(private val activity: FragmentActivity) {
                         authenticatedSignature.update(data)
                         val derSignature = authenticatedSignature.sign()
                         continuation.resume(
-                            SignResult.Success(derToRaw(derSignature))
+                            SignResult.Success(derToRaw(derSignature, fieldSizeBytes))
                         )
                     }
 
@@ -124,7 +129,7 @@ class Ssh(private val activity: FragmentActivity) {
         return "$algorithm $base64"
     }
 
-    private fun derToRaw(der: ByteArray): ByteArray {
+    private fun derToRaw(der: ByteArray, fieldSizeBytes: Int): ByteArray {
         val obj = ASN1InputStream(der).use { it.readObject() }
         require(obj is ASN1Sequence) {
             "Expected ASN1Sequence, got ${obj::class.simpleName}"
@@ -139,7 +144,7 @@ class Ssh(private val activity: FragmentActivity) {
             "Expected ASN1Integer for s, got ${sObj::class.simpleName}"
         }
 
-        return BigIntegers.asUnsignedByteArray(32, rObj.positiveValue) +
-                BigIntegers.asUnsignedByteArray(32, sObj.positiveValue)
+        return BigIntegers.asUnsignedByteArray(fieldSizeBytes, rObj.positiveValue) +
+                BigIntegers.asUnsignedByteArray(fieldSizeBytes, sObj.positiveValue)
     }
 }
