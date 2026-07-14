@@ -3,6 +3,7 @@ package com.bartmr.phonekey.core.bluetooth
 import android.Manifest
 import android.os.Build
 import android.util.Base64
+import android.util.Log
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -70,8 +71,12 @@ sealed class CommandState {
 }
 
 @Serializable
-data class ErrorResponse(val error: String)
+data class ErrorResponse(val message: String)
 
+@Serializable
+data class SignResponse(val signature: String)
+
+private const val TAG = "BleRequestsHandler"
 private val json = Json { ignoreUnknownKeys = true; classDiscriminator = "type" }
 
 class BleServerState(
@@ -159,7 +164,7 @@ fun rememberBleRequestsHandler(
             }
 
             if (commandState != null && !currentCommand.compareAndSet(null, commandState)) {
-                val busy = json.encodeToString(ErrorResponse.serializer(), ErrorResponse("busy"))
+                val busy = json.encodeToString(ErrorResponse.serializer(), ErrorResponse("Busy. The app can only deal with one request at a time."))
                 bleServer.sendToClient(device, busy.toByteArray(Charsets.UTF_8))
                 return@handler
             }
@@ -207,12 +212,19 @@ fun rememberBleRequestsHandler(
                     val dataToSign = Base64.decode(message.data, Base64.DEFAULT)
                     val algorithm = message.algorithm ?: KeystoreSigner.deriveAlgorithm(keyInfo)
                     coroutineScope.launch {
-                        when (val result = signer.sign(entry.privateKey, dataToSign, algorithm, keyInfo, activity)) {
-                            is SignResult.Success ->
-                                bleServer.sendToClient(device, result.signature)
-                            is SignResult.Error ->
-                                bleServer.sendToClient(device, ByteArray(0))
+                        val responseJson = when (val result = signer.sign(entry.privateKey, dataToSign, algorithm, keyInfo, activity)) {
+                            is SignResult.Success -> {
+                                val response = SignResponse(
+                                    signature = Base64.encodeToString(result.signature, Base64.NO_WRAP),
+                                )
+                                json.encodeToString(SignResponse.serializer(), response)
+                            }
+                            is SignResult.Error -> {
+                                Log.e(TAG, "Sign failed: code=${result.code}, message=${result.message}")
+                                json.encodeToString(ErrorResponse.serializer(), ErrorResponse(result.message))
+                            }
                         }
+                        bleServer.sendToClient(device, responseJson.toByteArray(Charsets.UTF_8))
                         currentCommand.set(null)
                     }
                 }

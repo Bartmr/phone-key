@@ -139,8 +139,8 @@ func Connect(deviceAddress string) (*Connection, error) {
 // framed response. The response is delimited by a single 0x02 byte (same protocol
 // as the Rust implementation). The function returns the accumulated payload
 // without the delimiter.
-func (c *Connection) SendMessage(jsonStr string) ([]byte, error) {
-	err := c.char.WriteValue([]byte(jsonStr), map[string]interface{}{"type": "reliable"})
+func (c *Connection) SendMessage(jsonStr []byte) ([]byte, error) {
+	err := c.char.WriteValue(jsonStr, map[string]interface{}{"type": "reliable"})
 	if err != nil {
 		return nil, fmt.Errorf("GATT write failed: %w", err)
 	}

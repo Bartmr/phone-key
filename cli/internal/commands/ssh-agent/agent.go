@@ -36,6 +36,16 @@ type keyEntryResponse struct {
 // Android KeyProperties.PURPOSE_SIGN = 2
 const purposeSign = 2
 
+// signResponse is the JSON response for a successful sign command.
+type signResponse struct {
+	Signature string `json:"signature"`
+}
+
+// errorResponse is the JSON response for any command error.
+type errorResponse struct {
+	Message string `json:"message"`
+}
+
 // PhoneKeyAgent implements the golang.org/x/crypto/ssh/agent.Agent interface
 // by proxying requests to the phone over Bluetooth.
 type PhoneKeyAgent struct {
@@ -82,7 +92,7 @@ func (a *PhoneKeyAgent) sendMessage(jsonStr string) ([]byte, error) {
 		return nil, err
 	}
 
-	response, err := conn.SendMessage(jsonStr)
+	response, err := conn.SendMessage([]byte(jsonStr))
 	if err != nil {
 		// Discard broken connection so the next call creates a fresh one.
 		a.mu.Lock()
@@ -275,67 +285,78 @@ func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, er
 		return nil, fmt.Errorf("sign request failed: %w", err)
 	}
 
-	if len(response) == 0 {
-		return nil, fmt.Errorf("signing failed on device: empty response")
-	}
-
-	keyType := key.Type()
-	var blob []byte
-
-	switch keyType {
-	case ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521:
-		var sig ecdsaSig
-		_, err := asn1.Unmarshal(response, &sig)
+	// Parse as a successful sign response: {"signature":"<base64>"}.
+	var signResp signResponse
+	if err := json.Unmarshal(response, &signResp); err == nil {
+		signatureBytes, err := base64.StdEncoding.DecodeString(signResp.Signature)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse DER signature: %w", err)
+			return nil, fmt.Errorf("failed to decode signature base64: %w", err)
 		}
 
-		curveByteSize := ecdsaCurveByteSize(keyType)
-		if curveByteSize == 0 {
+		keyType := key.Type()
+		var blob []byte
+
+		switch keyType {
+		case ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521:
+			var sig ecdsaSig
+			_, err := asn1.Unmarshal(signatureBytes, &sig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse DER signature: %w", err)
+			}
+
+			curveByteSize := ecdsaCurveByteSize(keyType)
+			if curveByteSize == 0 {
+				return nil, fmt.Errorf("unsupported key type for signing: %s", keyType)
+			}
+
+			// Convert *big.Int r and s to fixed-length big-endian bytes.
+			rBytes := sig.R.Bytes()
+			rPadded := make([]byte, curveByteSize)
+			copyStartR := curveByteSize - len(rBytes)
+			if copyStartR < 0 {
+				rBytes = rBytes[len(rBytes)-curveByteSize:]
+				copyStartR = 0
+			}
+			copy(rPadded[copyStartR:], rBytes)
+
+			sBytes := sig.S.Bytes()
+			sPadded := make([]byte, curveByteSize)
+			copyStartS := curveByteSize - len(sBytes)
+			if copyStartS < 0 {
+				sBytes = sBytes[len(sBytes)-curveByteSize:]
+				copyStartS = 0
+			}
+			copy(sPadded[copyStartS:], sBytes)
+
+			blob = append(toMPInt(rPadded), toMPInt(sPadded)...)
+
+			fmt.Fprintf(os.Stderr,
+				"[ssh-agent] Sign(%s): curve=%d, blobLen=%d\n",
+				keyType, curveByteSize, len(blob),
+			)
+
+		case ssh.KeyAlgoRSA:
+			// RSA signatures from Signature.sign() are already PKCS#1 v1.5 format,
+			// which is what SSH expects. Wrap with mpint encoding.
+			blob = toMPInt(signatureBytes)
+
+		default:
 			return nil, fmt.Errorf("unsupported key type for signing: %s", keyType)
 		}
 
-		// Convert *big.Int r and s to fixed-length big-endian bytes.
-		rBytes := sig.R.Bytes()
-		// Pad or truncate to curve byte size (big.Int.Bytes() strips leading zeros).
-		rPadded := make([]byte, curveByteSize)
-		copyStartR := curveByteSize - len(rBytes)
-		if copyStartR < 0 {
-			// r is larger than expected; take the last curveByteSize bytes.
-			rBytes = rBytes[len(rBytes)-curveByteSize:]
-			copyStartR = 0
-		}
-		copy(rPadded[copyStartR:], rBytes)
-
-		sBytes := sig.S.Bytes()
-		sPadded := make([]byte, curveByteSize)
-		copyStartS := curveByteSize - len(sBytes)
-		if copyStartS < 0 {
-			sBytes = sBytes[len(sBytes)-curveByteSize:]
-			copyStartS = 0
-		}
-		copy(sPadded[copyStartS:], sBytes)
-
-		blob = append(toMPInt(rPadded), toMPInt(sPadded)...)
-
-		fmt.Fprintf(os.Stderr,
-			"[ssh-agent] Sign(%s): curve=%d, blobLen=%d\n",
-			keyType, curveByteSize, len(blob),
-		)
-
-	case ssh.KeyAlgoRSA:
-		// RSA signatures from Signature.sign() are already PKCS#1 v1.5 format,
-		// which is what SSH expects. Wrap with mpint encoding (type + signature).
-		blob = toMPInt(response)
-
-	default:
-		return nil, fmt.Errorf("unsupported key type for signing: %s", keyType)
+		return &ssh.Signature{
+			Format: keyType,
+			Blob:   blob,
+		}, nil
 	}
 
-	return &ssh.Signature{
-		Format: keyType,
-		Blob:   blob,
-	}, nil
+	// Parse as an error response: {"message":"<reason>"}.
+	var errResp errorResponse
+	if err := json.Unmarshal(response, &errResp); err == nil {
+		return nil, fmt.Errorf("signing failed on device: %s", errResp.Message)
+	}
+
+	return nil, fmt.Errorf("unexpected sign response: %s", string(response))
 }
 
 // Add is a no-op — the phone manages its own keys.

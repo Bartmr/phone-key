@@ -123,6 +123,14 @@ type ListKeysResponse = KeyEntry[];
 - The client is responsible for filtering keys based on algorithm and purposes.
 - An empty array `[]` is returned if no keys are enrolled.
 
+**Example:**
+
+```
+Client → Phone:  {"type":"list-keys"}
+Phone → Client:  [{"alias":"my-key","algorithm":"EC","keySize":256,...}]
+Phone → Client:  0x02
+```
+
 ### 2. `sign`
 
 Ask the phone to sign data with a specific asymmetric key. If the key requires user authentication, this triggers biometric authentication (fingerprint / face).
@@ -151,18 +159,30 @@ interface SignRequest {
 
 ```ts
 /**
- * Response body for a successful `sign` command.
- *
- * Raw bytes from `Signature.sign()` — the exact output depends on the algorithm:
- * - **ECDSA**: DER-encoded ASN.1 signature (sequence of two INTEGERs: r and s).
- * - **RSA**: Raw big-endian signature bytes (PKCS#1 v1.5 or PSS, depending on key configuration).
- *
- * The client is responsible for encoding this into the appropriate protocol format
- * (e.g. SSH signature blob with mpint encoding).
- *
- * On error, the phone sends an empty byte array (zero-length).
+ * Successful sign response.
  */
-type SignResponse = ArrayBuffer;
+interface SignResponse {
+  /**
+   * Base64-encoded signature bytes from `Signature.sign()`.
+   *
+   * The raw bytes depend on the algorithm:
+   * - **ECDSA**: DER-encoded ASN.1 signature (sequence of two INTEGERs: r and s).
+   * - **RSA**: Raw big-endian signature bytes (PKCS#1 v1.5 or PSS, depending on key configuration).
+   *
+   * The client is responsible for encoding this into the appropriate protocol format
+   * (e.g. SSH signature blob with mpint encoding).
+   */
+  signature: string;
+}
+```
+
+**Example:**
+
+```
+Client → Phone:  {"type":"sign","keyAlias":"my-key","data":"AAAAIGZsNThuNnJm...","algorithm":"SHA256withECDSA"}
+                 (phone shows biometric prompt; user authenticates)
+Phone → Client:  {"signature":"MEUCIQDfn0jA..."}
+Phone → Client:  0x02
 ```
 
 ### 3. `echo`
@@ -188,67 +208,7 @@ The `data` string echoed back verbatim as raw UTF-8 bytes. There is no JSON wrap
 type EchoResponse = ArrayBuffer;
 ```
 
----
-
-## Error responses (Server → Client)
-
-### Busy error
-
-The phone processes only **one command at a time**. If a new command arrives while another is still in progress, the phone immediately responds with:
-
-```ts
-interface BusyError {
-  error: "busy";
-}
-```
-
-The client should retry after a short delay.
-
----
-
-### Union of all request types
-
-```ts
-/** Any command the client can send to the phone. */
-type ClientRequest = ListKeysRequest | SignRequest | EchoRequest;
-```
-
----
-
-## Concurrency model
-
-The phone enforces sequential command processing with an `AtomicReference<CommandState>`:
-
-1. A command arrives and is parsed.
-2. If the command requires a state transition (i.e. it's not an `echo`):
-   - The phone attempts to CAS (compare-and-swap) the current state from `null` to the new command state.
-   - If CAS fails (another command is in progress), it responds with `{"error": "busy"}` and stops processing.
-3. When the command completes, the state is reset to `null`.
-
-`echo` commands are exempt from this lock — they always execute regardless of current state.
-
----
-
-## Full exchange examples
-
-### Listing keys
-
-```
-Client → Phone:  {"type":"list-keys"}
-Phone → Client:  [{"alias":"my-key","algorithm":"EC","keySize":256,...}]
-Phone → Client:  0x02
-```
-
-### Signing
-
-```
-Client → Phone:  {"type":"sign","keyAlias":"my-key","data":"AAAAIGZsNThuNnJm...","algorithm":"SHA256withECDSA"}
-                 (phone shows biometric prompt; user authenticates)
-Phone → Client:  <DER-encoded ECDSA signature bytes>
-Phone → Client:  0x02
-```
-
-### Echo
+**Example:**
 
 ```
 Client → Phone:  {"type":"echo","data":"ping"}
@@ -256,16 +216,17 @@ Phone → Client:  ping
 Phone → Client:  0x02
 ```
 
-### Busy rejection
 
-```
-Client → Phone:  {"type":"sign","keyAlias":"my-key","data":"AAAAIGZ...","algorithm":"SHA256withECDSA"}
-Client → Phone:  {"type":"list-keys"}                           ← sent before sign completes
-Phone → Client:  {"error":"busy"}
-Phone → Client:  0x02
-                 ... later, the sign completes ...
-Phone → Client:  <DER-encoded signature bytes>
-Phone → Client:  0x02
+---
+
+## Error responses (Server → Client)
+
+All error responses follow this schema:
+
+```ts
+interface Error {
+  message: string;
+}
 ```
 
 ---

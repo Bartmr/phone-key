@@ -1,6 +1,5 @@
 package com.bartmr.phonekey.core.keystore
 
-import android.security.keystore.KeyProperties
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat

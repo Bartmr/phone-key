@@ -70,6 +70,7 @@ fun CreateKeyForm(
             val trimmed = alias.trim()
             when {
                 trimmed.isEmpty() -> "Alias must not be empty"
+                repository.keyExists(trimmed) -> "Alias already exists"
                 else -> null
             }
         }
@@ -321,11 +322,8 @@ fun CreateKeyForm(
     Button(
         enabled = aliasError == null && authValidityError == null && selectedPurposes != 0,
         onClick = {
-            val trimmedAlias = alias.trim()
-            if (repository.keyExists(trimmedAlias)) return@Button
-
             val info = KeyInfo(
-                alias = trimmedAlias,
+                alias = alias.trim(),
                 algorithm = selectedAlgorithm,
                 keySize = selectedKeySize,
                 purposes = selectedPurposes,
