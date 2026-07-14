@@ -52,16 +52,16 @@ sealed class ClientMessage {
 @Serializable
 sealed class ServerMessage {
     @Serializable
-    @SerialName("list-keys")
+    @SerialName("list-keys-response")
     data class ListKeysResponse(val keys: List<KeyEntryResponse>) : ServerMessage()
 
     @Serializable
-    @SerialName("sign")
+    @SerialName("sign-response")
     data class SignResponse(val signature: String) : ServerMessage()
 
     @Serializable
     @SerialName("error")
-    data class ErrorResponse(val message: String) : ServerMessage()
+    data class Error(val message: String) : ServerMessage()
 }
 
 @Serializable
@@ -172,7 +172,7 @@ fun rememberBleRequestsHandler(
             }
 
             if (commandState != null && !currentCommand.compareAndSet(null, commandState)) {
-                val busy = json.encodeToString(ServerMessage.ErrorResponse.serializer(), ServerMessage.ErrorResponse("Busy. The app can only deal with one request at a time."))
+                val busy = json.encodeToString(ServerMessage.Error.serializer(), ServerMessage.Error("Busy. The app can only deal with one request at a time."))
                 bleServer.sendToClient(device, busy.toByteArray(Charsets.UTF_8))
                 return@handler
             }
@@ -232,8 +232,8 @@ fun rememberBleRequestsHandler(
                             is SignResult.Error -> {
                                 Log.e(TAG, "Sign failed: code=${result.code}, message=${result.message}")
                                 json.encodeToString(
-                                    ServerMessage.ErrorResponse.serializer(),
-                                    ServerMessage.ErrorResponse(result.message),
+                                    ServerMessage.Error.serializer(),
+                                    ServerMessage.Error(result.message),
                                 )
                             }
                         }

@@ -98,7 +98,7 @@ No additional fields.
 }
 
 interface ListKeysResponse {
-  type: "list-keys";
+  type: "list-keys-response";
   keys: KeyEntry[];
 }
 ```
@@ -113,7 +113,7 @@ interface ListKeysResponse {
 
 ```
 Client → Phone:  {"type":"list-keys"}
-Phone → Client:  {"type":"list-keys","keys":[{"alias":"my-key","algorithm":"EC","keySize":256,...}]}
+Phone → Client:  {"type":"list-keys-response","keys":[{"alias":"my-key","algorithm":"EC","keySize":256,...}]}
 Phone → Client:  0x02
 ```
 
@@ -148,7 +148,7 @@ interface SignRequest {
  * Successful sign response.
  */
 interface SignResponse {
-  type: "sign";
+  type: "sign-response";
 
   /**
    * Base64-encoded signature bytes from `Signature.sign()`.
@@ -169,7 +169,7 @@ interface SignResponse {
 ```
 Client → Phone:  {"type":"sign","keyAlias":"my-key","data":"AAAAIGZsNThuNnJm...","algorithm":"SHA256withECDSA"}
                  (phone shows biometric prompt; user authenticates)
-Phone → Client:  {"type":"sign","signature":"MEUCIQDfn0jA..."}
+Phone → Client:  {"type":"sign-response","signature":"MEUCIQDfn0jA..."}
 Phone → Client:  0x02
 ```
 
@@ -209,7 +209,7 @@ Phone → Client:  0x02
 All error responses follow this schema:
 
 ```ts
-interface ErrorResponse {
+interface Error {
   type: "error";
   message: string;
 }

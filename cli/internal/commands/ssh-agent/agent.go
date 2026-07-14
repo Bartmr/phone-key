@@ -135,7 +135,7 @@ func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
 	}
 
 	switch msgType {
-	case "list-keys":
+	case "list-keys-response":
 		var parsed listKeysResponse
 		if err := json.Unmarshal(response, &parsed); err != nil {
 			return nil, fmt.Errorf("failed to decode list-keys response: %w", err)
@@ -330,7 +330,7 @@ func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, er
 	}
 
 	switch msgType {
-	case "sign":
+	case "sign-response":
 		var signResp signResponse
 		if err := json.Unmarshal(response, &signResp); err != nil {
 			return nil, fmt.Errorf("failed to decode sign response: %w", err)
