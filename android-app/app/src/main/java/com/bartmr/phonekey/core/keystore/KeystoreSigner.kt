@@ -107,7 +107,7 @@ class KeystoreSigner {
                     "Key '${keyInfo.alias}' has no digests configured"
                 )
             val digestSuffix = digest.replace("-", "")
-            return "$digestSuffix${"with"}${keyInfo.algorithm}"
+            return "${digestSuffix}with${keyInfo.algorithm}"
         }
     }
 }

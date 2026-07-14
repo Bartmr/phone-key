@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 	"sync"
 
 	"golang.org/x/crypto/ssh"
@@ -229,15 +230,7 @@ func deriveAlgorithm(keyType string, digests []string) string {
 	if len(digests) > 0 {
 		digest = digests[0]
 	}
-	digestSuffix := digest
-	// Strip hyphens: "SHA-256" -> "SHA256"
-	for i := 0; i < len(digestSuffix); {
-		if digestSuffix[i] == '-' {
-			digestSuffix = digestSuffix[:i] + digestSuffix[i+1:]
-		} else {
-			i++
-		}
-	}
+	digestSuffix := strings.ReplaceAll(digest, "-", "")
 
 	switch keyType {
 	case ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521:
