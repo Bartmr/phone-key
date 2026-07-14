@@ -51,7 +51,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.nordic.ble)
     implementation(libs.androidx.biometric)
-    implementation(libs.bouncycastle)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.navigation.compose)
     testImplementation(libs.junit)

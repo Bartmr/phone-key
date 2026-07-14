@@ -42,23 +42,23 @@ Every message from the client **must** include a `"type"` field. The server uses
 
 | `type` value | Direction | Description |
 |---|---|---|
-| `"ssh-request-identities"` | Client → Server | Request the list of available SSH keys |
-| `"ssh-sign"` | Client → Server | Request a cryptographic signature |
+| `"list-keys"` | Client → Server | Request the list of available keys from Android KeyStore |
+| `"sign"` | Client → Server | Request a cryptographic signature |
 | `"echo"` | Client → Server | Echo test (connectivity check) |
 
 ---
 
 ## Commands (Client → Server)
 
-### 1. `ssh-request-identities`
+### 1. `list-keys`
 
-Ask the phone for all available SSH public keys.
+Ask the phone for all available keys in the Android KeyStore, with full metadata and public key bytes.
 
 **Request:**
 
 ```json
 {
-  "type": "ssh-request-identities"
+  "type": "list-keys"
 }
 ```
 
@@ -66,59 +66,87 @@ No additional fields.
 
 **Response:**
 
-A JSON array of identity objects:
+A JSON array of key entry objects:
 
 ```json
 [
   {
-    "alias": "my-github-key",
-    "publicKeyBase64": "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQ..."
+    "alias": "my-ec-key",
+    "algorithm": "EC",
+    "keySize": 256,
+    "purposes": 2,
+    "digests": ["SHA-256"],
+    "signaturePaddings": [],
+    "encryptionPaddings": [],
+    "blockModes": [],
+    "userAuthenticationRequired": true,
+    "userAuthenticationValidityDurationSeconds": 0,
+    "publicKeyBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE..."
+  },
+  {
+    "alias": "aes-key",
+    "algorithm": "AES",
+    "keySize": 256,
+    "purposes": 12,
+    "digests": [],
+    "signaturePaddings": [],
+    "encryptionPaddings": ["PKCS7"],
+    "blockModes": ["CBC", "GCM"],
+    "userAuthenticationRequired": false,
+    "userAuthenticationValidityDurationSeconds": 0
   }
 ]
 ```
 
 | Field | Type | Description |
 |---|---|---|
-| `alias` | string | The Android KeyStore alias for this key. Used in `ssh-sign` to identify which key to sign with. |
-| `publicKeyBase64` | string | The SSH-format public key (e.g. `ecdsa-sha2-nistp256 AAAA...`), base64-encoded (standard encoding). |
+| `alias` | string | The Android KeyStore alias for this key. Used in `sign` to identify which key to sign with. |
+| `algorithm` | string | Key algorithm: `"EC"`, `"RSA"`, `"AES"`, `"HMAC"` or others. |
+| `keySize` | int | Key size in bits (e.g. 256, 2048). |
+| `purposes` | int | Bitmask of `KeyProperties.PURPOSE_*` values. `2` = SIGN, `1` = VERIFY, `4` = ENCRYPT, `8` = DECRYPT. |
+| `digests` | string[] | Configured digest algorithms (e.g. `["SHA-256"]`). |
+| `signaturePaddings` | string[] | Configured signature padding schemes. |
+| `encryptionPaddings` | string[] | Configured encryption padding schemes. |
+| `blockModes` | string[] | Configured block cipher modes. |
+| `userAuthenticationRequired` | bool | Whether biometric/device-credential authentication is required to use this key. |
+| `userAuthenticationValidityDurationSeconds` | int | How long after authentication the key can be reused without re-authenticating. |
+| `publicKeyBase64` | string? | X.509 SubjectPublicKeyInfo DER bytes, base64-encoded. Only present for asymmetric key pairs (`PrivateKeyEntry`). `null` for symmetric keys (`SecretKeyEntry`). |
 
 **Details:**
 
-- Only **EC keys** (ECPublicKey) are returned. Keys from other algorithms (e.g. RSA) are silently skipped.
-- The phone loads keys from the Android KeyStore and cross-references them with the app's own key metadata repository.
+- All keys from the Android KeyStore are returned — symmetric (AES, HMAC) and asymmetric (EC, RSA).
+- The client is responsible for filtering keys based on algorithm and purposes.
 - An empty array `[]` is returned if no keys are enrolled.
 
-### 2. `ssh-sign`
+### 2. `sign`
 
-Ask the phone to sign data with a specific key. This triggers biometric authentication (fingerprint / face) because the private key is hardware-backed and requires user verification.
+Ask the phone to sign data with a specific asymmetric key. If the key requires user authentication, this triggers biometric authentication (fingerprint / face).
 
 **Request:**
 
 ```json
 {
-  "type": "ssh-sign",
-  "keyAlias": "my-github-key",
-  "data": "AAAAIGZsNThuNnJmSnBOK1NLTDFoMzhuM3h0QkJpQXNmQ2t3"
+  "type": "sign",
+  "keyAlias": "my-ec-key",
+  "data": "AAAAIGZsNThuNnJmSnBOK1NLTDFoMzhuM3h0QkJpQXNmQ2t3",
+  "algorithm": "SHA256withECDSA"
 }
 ```
 
 | Field | Type | Description |
 |---|---|---|
-| `type` | string | Must be `"ssh-sign"`. |
-| `keyAlias` | string | The alias of the key to sign with (from the `ssh-request-identities` response). |
-| `data` | string | The data to sign, base64-encoded (standard encoding). This is typically the SSH signing payload (session identifier concatenated with data-to-be-signed). |
+| `type` | string | Must be `"sign"`. |
+| `keyAlias` | string | The alias of the key to sign with (from the `list-keys` response). |
+| `data` | string | The data to sign, base64-encoded (standard encoding). |
+| `algorithm` | string? | Java `Signature` algorithm string (e.g. `"SHA256withECDSA"`, `"SHA512withRSA"`). If omitted, the phone derives it from the key's first configured digest and algorithm. |
 
 **Response (success):**
 
-Raw bytes — the ECDSA signature as the concatenation of `r || s` (both as fixed-length big-endian integers). The byte length depends on the curve:
+Raw bytes from `Signature.sign()` — the exact output depends on the algorithm:
+- **ECDSA**: DER-encoded ASN.1 signature (sequence of two INTEGERs: r and s).
+- **RSA**: Raw big-endian signature bytes (PKCS#1 v1.5 or PSS, depending on key configuration).
 
-| Curve | Signature length |
-|---|---|
-| P-256 (`ecdsa-sha2-nistp256`) | 64 bytes (r: 32, s: 32) |
-| P-384 (`ecdsa-sha2-nistp384`) | 96 bytes (r: 48, s: 48) |
-| P-521 (`ecdsa-sha2-nistp521`) | 132 bytes (r: 66, s: 66) |
-
-The client is responsible for encoding this into the SSH signature blob format (mpint length-prefixed `r` and `s`).
+The client is responsible for encoding this into the appropriate protocol format (e.g. SSH signature blob with mpint encoding).
 
 **Response (error):**
 
@@ -175,20 +203,20 @@ The phone enforces sequential command processing with an `AtomicReference<Comman
 
 ## Full exchange examples
 
-### Listing identities
+### Listing keys
 
 ```
-Client → Phone:  {"type":"ssh-request-identities"}
-Phone → Client:  [{"alias":"my-key","publicKeyBase64":"c3NoLWVkMjU1MTk..."}]
+Client → Phone:  {"type":"list-keys"}
+Phone → Client:  [{"alias":"my-key","algorithm":"EC","keySize":256,...}]
 Phone → Client:  0x02
 ```
 
 ### Signing
 
 ```
-Client → Phone:  {"type":"ssh-sign","keyAlias":"my-key","data":"AAAAIGZsNThuNnJm..."}
+Client → Phone:  {"type":"sign","keyAlias":"my-key","data":"AAAAIGZsNThuNnJm...","algorithm":"SHA256withECDSA"}
                  (phone shows biometric prompt; user authenticates)
-Phone → Client:  <64 raw bytes (P-256 r||s)>
+Phone → Client:  <DER-encoded ECDSA signature bytes>
 Phone → Client:  0x02
 ```
 
@@ -203,12 +231,12 @@ Phone → Client:  0x02
 ### Busy rejection
 
 ```
-Client → Phone:  {"type":"ssh-sign","keyAlias":"my-key","data":"AAAAIGZ..."}
-Client → Phone:  {"type":"ssh-request-identities"}     ← sent before sign completes
+Client → Phone:  {"type":"sign","keyAlias":"my-key","data":"AAAAIGZ...","algorithm":"SHA256withECDSA"}
+Client → Phone:  {"type":"list-keys"}                           ← sent before sign completes
 Phone → Client:  {"error":"busy"}
 Phone → Client:  0x02
                  ... later, the sign completes ...
-Phone → Client:  <64 raw bytes>
+Phone → Client:  <DER-encoded signature bytes>
 Phone → Client:  0x02
 ```
 
@@ -218,5 +246,5 @@ Phone → Client:  0x02
 
 - **BLE pairing**: The GATT characteristic requires `ENCRYPTED_MITM` — the connection is encrypted and MITM-protected. Both devices display a pairing code.
 - **Hardware-backed keys**: Private keys are generated and stored in the Android KeyStore backed by the Trusted Execution Environment (TEE) or Secure Element. They never leave the secure hardware.
-- **Biometric binding**: Each signing operation requires the user to authenticate with biometrics (fingerprint or face). The `KeyProperties.AUTH_BIOMETRIC_STRONG` requirement is enforced by the secure hardware, not the app.
-- **Single-command locking**: Only one sensitive command (sign or list-identities) may be in flight at a time, preventing interleaving attacks.
+- **Biometric binding**: Each signing operation requires the user to authenticate with biometrics (fingerprint or face) when the key is configured with `userAuthenticationRequired`. The `KeyProperties.AUTH_BIOMETRIC_STRONG` requirement is enforced by the secure hardware, not the app.
+- **Single-command locking**: Only one sensitive command (sign or list-keys) may be in flight at a time, preventing interleaving attacks.
