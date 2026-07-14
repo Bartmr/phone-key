@@ -23,7 +23,6 @@ import com.bartmr.phonekey.core.keystore.SignResult
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.security.KeyStore
 import java.util.concurrent.atomic.AtomicReference
@@ -51,6 +50,21 @@ sealed class ClientMessage {
 }
 
 @Serializable
+sealed class ServerMessage {
+    @Serializable
+    @SerialName("list-keys")
+    data class ListKeysResponse(val keys: List<KeyEntryResponse>) : ServerMessage()
+
+    @Serializable
+    @SerialName("sign")
+    data class SignResponse(val signature: String) : ServerMessage()
+
+    @Serializable
+    @SerialName("error")
+    data class ErrorResponse(val message: String) : ServerMessage()
+}
+
+@Serializable
 data class KeyEntryResponse(
     val alias: String,
     val algorithm: String,
@@ -69,12 +83,6 @@ sealed class CommandState {
     data object ListingKeys : CommandState()
     data class Signing(val keyAlias: String) : CommandState()
 }
-
-@Serializable
-data class ErrorResponse(val message: String)
-
-@Serializable
-data class SignResponse(val signature: String)
 
 private const val TAG = "BleRequestsHandler"
 private val json = Json { ignoreUnknownKeys = true; classDiscriminator = "type" }
@@ -164,7 +172,7 @@ fun rememberBleRequestsHandler(
             }
 
             if (commandState != null && !currentCommand.compareAndSet(null, commandState)) {
-                val busy = json.encodeToString(ErrorResponse.serializer(), ErrorResponse("Busy. The app can only deal with one request at a time."))
+                val busy = json.encodeToString(ServerMessage.ErrorResponse.serializer(), ServerMessage.ErrorResponse("Busy. The app can only deal with one request at a time."))
                 bleServer.sendToClient(device, busy.toByteArray(Charsets.UTF_8))
                 return@handler
             }
@@ -198,8 +206,8 @@ fun rememberBleRequestsHandler(
                         )
                     }
                     val response = json.encodeToString(
-                        ListSerializer(KeyEntryResponse.serializer()),
-                        entries,
+                        ServerMessage.serializer(),
+                        ServerMessage.ListKeysResponse(entries),
                     )
                     bleServer.sendToClient(device, response.toByteArray(Charsets.UTF_8))
                     currentCommand.set(null)
@@ -214,14 +222,19 @@ fun rememberBleRequestsHandler(
                     coroutineScope.launch {
                         val responseJson = when (val result = signer.sign(entry.privateKey, dataToSign, algorithm, keyInfo, activity)) {
                             is SignResult.Success -> {
-                                val response = SignResponse(
-                                    signature = Base64.encodeToString(result.signature, Base64.NO_WRAP),
+                                json.encodeToString(
+                                    ServerMessage.SignResponse.serializer(),
+                                    ServerMessage.SignResponse(
+                                        signature = Base64.encodeToString(result.signature, Base64.NO_WRAP),
+                                    ),
                                 )
-                                json.encodeToString(SignResponse.serializer(), response)
                             }
                             is SignResult.Error -> {
                                 Log.e(TAG, "Sign failed: code=${result.code}, message=${result.message}")
-                                json.encodeToString(ErrorResponse.serializer(), ErrorResponse(result.message))
+                                json.encodeToString(
+                                    ServerMessage.ErrorResponse.serializer(),
+                                    ServerMessage.ErrorResponse(result.message),
+                                )
                             }
                         }
                         bleServer.sendToClient(device, responseJson.toByteArray(Charsets.UTF_8))

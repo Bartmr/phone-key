@@ -34,23 +34,28 @@ The connection requires Bluetooth pairing with MITM protection — both devices 
         |                                      |
 ```
 
-## Message format
+---
 
-### Type discriminator
+## Commands (Client → Server)
 
-Every message from the client **must** include a `"type"` field. The server uses it to deserialize into the correct message class:
+### 1. `list-keys`
 
-| `type` value | Direction | Description |
-|---|---|---|
-| `"list-keys"` | Client → Server | Request the list of available keys from Android KeyStore |
-| `"sign"` | Client → Server | Request a cryptographic signature |
-| `"echo"` | Client → Server | Echo test (connectivity check) |
+Ask the phone for all available keys in the Android KeyStore, with full metadata and public key bytes.
 
-### Common types
+**Request:**
 
 ```ts
-/** A single key entry returned by the `list-keys` command. */
-interface KeyEntry {
+interface ListKeysRequest {
+  type: "list-keys";
+}
+```
+
+No additional fields.
+
+**Response:**
+
+```ts
+{
   /** The Android KeyStore alias for this key. Used in `sign` to identify which key to sign with. */
   alias: string;
 
@@ -91,43 +96,24 @@ interface KeyEntry {
    */
   publicKeyBase64: string | null;
 }
-```
 
----
-
-## Commands (Client → Server)
-
-### 1. `list-keys`
-
-Ask the phone for all available keys in the Android KeyStore, with full metadata and public key bytes.
-
-**Request:**
-
-```ts
-interface ListKeysRequest {
+interface ListKeysResponse {
   type: "list-keys";
+  keys: KeyEntry[];
 }
-```
-
-No additional fields.
-
-**Response:**
-
-```ts
-type ListKeysResponse = KeyEntry[];
 ```
 
 **Details:**
 
 - All keys from the Android KeyStore are returned — symmetric (AES, HMAC) and asymmetric (EC, RSA).
 - The client is responsible for filtering keys based on algorithm and purposes.
-- An empty array `[]` is returned if no keys are enrolled.
+- An empty array `[]` is returned in `keys` if no keys are enrolled.
 
 **Example:**
 
 ```
 Client → Phone:  {"type":"list-keys"}
-Phone → Client:  [{"alias":"my-key","algorithm":"EC","keySize":256,...}]
+Phone → Client:  {"type":"list-keys","keys":[{"alias":"my-key","algorithm":"EC","keySize":256,...}]}
 Phone → Client:  0x02
 ```
 
@@ -162,6 +148,8 @@ interface SignRequest {
  * Successful sign response.
  */
 interface SignResponse {
+  type: "sign";
+
   /**
    * Base64-encoded signature bytes from `Signature.sign()`.
    *
@@ -181,7 +169,7 @@ interface SignResponse {
 ```
 Client → Phone:  {"type":"sign","keyAlias":"my-key","data":"AAAAIGZsNThuNnJm...","algorithm":"SHA256withECDSA"}
                  (phone shows biometric prompt; user authenticates)
-Phone → Client:  {"signature":"MEUCIQDfn0jA..."}
+Phone → Client:  {"type":"sign","signature":"MEUCIQDfn0jA..."}
 Phone → Client:  0x02
 ```
 
@@ -216,15 +204,13 @@ Phone → Client:  ping
 Phone → Client:  0x02
 ```
 
-
----
-
 ## Error responses (Server → Client)
 
 All error responses follow this schema:
 
 ```ts
-interface Error {
+interface ErrorResponse {
+  type: "error";
   message: string;
 }
 ```
@@ -235,5 +221,3 @@ interface Error {
 
 - **BLE pairing**: The GATT characteristic requires `ENCRYPTED_MITM` — the connection is encrypted and MITM-protected. Both devices display a pairing code.
 - **Hardware-backed keys**: Private keys are generated and stored in the Android KeyStore backed by the Trusted Execution Environment (TEE) or Secure Element. They never leave the secure hardware.
-- **Biometric binding**: Each signing operation requires the user to authenticate with biometrics (fingerprint or face) when the key is configured with `userAuthenticationRequired`. The `KeyProperties.AUTH_BIOMETRIC_STRONG` requirement is enforced by the secure hardware, not the app.
-- **Single-command locking**: Only one sensitive command (sign or list-keys) may be in flight at a time, preventing interleaving attacks.
