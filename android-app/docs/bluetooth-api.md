@@ -46,6 +46,53 @@ Every message from the client **must** include a `"type"` field. The server uses
 | `"sign"` | Client → Server | Request a cryptographic signature |
 | `"echo"` | Client → Server | Echo test (connectivity check) |
 
+### Common types
+
+```ts
+/** A single key entry returned by the `list-keys` command. */
+interface KeyEntry {
+  /** The Android KeyStore alias for this key. Used in `sign` to identify which key to sign with. */
+  alias: string;
+
+  /** Key algorithm: `"EC"`, `"RSA"`, `"AES"`, `"HMAC"` or others. */
+  algorithm: string;
+
+  /** Key size in bits (e.g. 256, 2048). */
+  keySize: number;
+
+  /**
+   * Bitmask of `KeyProperties.PURPOSE_*` values.
+   * `2` = SIGN, `1` = VERIFY, `4` = ENCRYPT, `8` = DECRYPT.
+   */
+  purposes: number;
+
+  /** Configured digest algorithms (e.g. `["SHA-256"]`). */
+  digests: string[];
+
+  /** Configured signature padding schemes. */
+  signaturePaddings: string[];
+
+  /** Configured encryption padding schemes. */
+  encryptionPaddings: string[];
+
+  /** Configured block cipher modes. */
+  blockModes: string[];
+
+  /** Whether biometric/device-credential authentication is required to use this key. */
+  userAuthenticationRequired: boolean;
+
+  /** How long after authentication the key can be reused without re-authenticating. */
+  userAuthenticationValidityDurationSeconds: number;
+
+  /**
+   * X.509 SubjectPublicKeyInfo DER bytes, base64-encoded.
+   * Only present for asymmetric key pairs (`PrivateKeyEntry`).
+   * `null` for symmetric keys (`SecretKeyEntry`).
+   */
+  publicKeyBase64: string | null;
+}
+```
+
 ---
 
 ## Commands (Client → Server)
@@ -56,9 +103,9 @@ Ask the phone for all available keys in the Android KeyStore, with full metadata
 
 **Request:**
 
-```json
-{
-  "type": "list-keys"
+```ts
+interface ListKeysRequest {
+  type: "list-keys";
 }
 ```
 
@@ -66,51 +113,9 @@ No additional fields.
 
 **Response:**
 
-A JSON array of key entry objects:
-
-```json
-[
-  {
-    "alias": "my-ec-key",
-    "algorithm": "EC",
-    "keySize": 256,
-    "purposes": 2,
-    "digests": ["SHA-256"],
-    "signaturePaddings": [],
-    "encryptionPaddings": [],
-    "blockModes": [],
-    "userAuthenticationRequired": true,
-    "userAuthenticationValidityDurationSeconds": 0,
-    "publicKeyBase64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE..."
-  },
-  {
-    "alias": "aes-key",
-    "algorithm": "AES",
-    "keySize": 256,
-    "purposes": 12,
-    "digests": [],
-    "signaturePaddings": [],
-    "encryptionPaddings": ["PKCS7"],
-    "blockModes": ["CBC", "GCM"],
-    "userAuthenticationRequired": false,
-    "userAuthenticationValidityDurationSeconds": 0
-  }
-]
+```ts
+type ListKeysResponse = KeyEntry[];
 ```
-
-| Field | Type | Description |
-|---|---|---|
-| `alias` | string | The Android KeyStore alias for this key. Used in `sign` to identify which key to sign with. |
-| `algorithm` | string | Key algorithm: `"EC"`, `"RSA"`, `"AES"`, `"HMAC"` or others. |
-| `keySize` | int | Key size in bits (e.g. 256, 2048). |
-| `purposes` | int | Bitmask of `KeyProperties.PURPOSE_*` values. `2` = SIGN, `1` = VERIFY, `4` = ENCRYPT, `8` = DECRYPT. |
-| `digests` | string[] | Configured digest algorithms (e.g. `["SHA-256"]`). |
-| `signaturePaddings` | string[] | Configured signature padding schemes. |
-| `encryptionPaddings` | string[] | Configured encryption padding schemes. |
-| `blockModes` | string[] | Configured block cipher modes. |
-| `userAuthenticationRequired` | bool | Whether biometric/device-credential authentication is required to use this key. |
-| `userAuthenticationValidityDurationSeconds` | int | How long after authentication the key can be reused without re-authenticating. |
-| `publicKeyBase64` | string? | X.509 SubjectPublicKeyInfo DER bytes, base64-encoded. Only present for asymmetric key pairs (`PrivateKeyEntry`). `null` for symmetric keys (`SecretKeyEntry`). |
 
 **Details:**
 
@@ -124,33 +129,41 @@ Ask the phone to sign data with a specific asymmetric key. If the key requires u
 
 **Request:**
 
-```json
-{
-  "type": "sign",
-  "keyAlias": "my-ec-key",
-  "data": "AAAAIGZsNThuNnJmSnBOK1NLTDFoMzhuM3h0QkJpQXNmQ2t3",
-  "algorithm": "SHA256withECDSA"
+```ts
+interface SignRequest {
+  type: "sign";
+
+  /** The alias of the key to sign with (from the `list-keys` response). */
+  keyAlias: string;
+
+  /** The data to sign, base64-encoded (standard encoding). */
+  data: string;
+
+  /**
+   * Java `Signature` algorithm string (e.g. `"SHA256withECDSA"`, `"SHA512withRSA"`).
+   * If omitted, the phone derives it from the key's first configured digest and algorithm.
+   */
+  algorithm?: string;
 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `type` | string | Must be `"sign"`. |
-| `keyAlias` | string | The alias of the key to sign with (from the `list-keys` response). |
-| `data` | string | The data to sign, base64-encoded (standard encoding). |
-| `algorithm` | string? | Java `Signature` algorithm string (e.g. `"SHA256withECDSA"`, `"SHA512withRSA"`). If omitted, the phone derives it from the key's first configured digest and algorithm. |
+**Response:**
 
-**Response (success):**
-
-Raw bytes from `Signature.sign()` — the exact output depends on the algorithm:
-- **ECDSA**: DER-encoded ASN.1 signature (sequence of two INTEGERs: r and s).
-- **RSA**: Raw big-endian signature bytes (PKCS#1 v1.5 or PSS, depending on key configuration).
-
-The client is responsible for encoding this into the appropriate protocol format (e.g. SSH signature blob with mpint encoding).
-
-**Response (error):**
-
-An empty byte array (zero-length).
+```ts
+/**
+ * Response body for a successful `sign` command.
+ *
+ * Raw bytes from `Signature.sign()` — the exact output depends on the algorithm:
+ * - **ECDSA**: DER-encoded ASN.1 signature (sequence of two INTEGERs: r and s).
+ * - **RSA**: Raw big-endian signature bytes (PKCS#1 v1.5 or PSS, depending on key configuration).
+ *
+ * The client is responsible for encoding this into the appropriate protocol format
+ * (e.g. SSH signature blob with mpint encoding).
+ *
+ * On error, the phone sends an empty byte array (zero-length).
+ */
+type SignResponse = ArrayBuffer;
+```
 
 ### 3. `echo`
 
@@ -158,16 +171,22 @@ Simple ping/pong for connectivity testing.
 
 **Request:**
 
-```json
-{
-  "type": "echo",
-  "data": "hello"
+```ts
+interface EchoRequest {
+  type: "echo";
+
+  /** Arbitrary string to echo back. */
+  data: string;
 }
 ```
 
 **Response:**
 
 The `data` string echoed back verbatim as raw UTF-8 bytes. There is no JSON wrapper — it's the raw string bytes.
+
+```ts
+type EchoResponse = ArrayBuffer;
+```
 
 ---
 
@@ -177,13 +196,22 @@ The `data` string echoed back verbatim as raw UTF-8 bytes. There is no JSON wrap
 
 The phone processes only **one command at a time**. If a new command arrives while another is still in progress, the phone immediately responds with:
 
-```json
-{
-  "error": "busy"
+```ts
+interface BusyError {
+  error: "busy";
 }
 ```
 
 The client should retry after a short delay.
+
+---
+
+### Union of all request types
+
+```ts
+/** Any command the client can send to the phone. */
+type ClientRequest = ListKeysRequest | SignRequest | EchoRequest;
+```
 
 ---
 
