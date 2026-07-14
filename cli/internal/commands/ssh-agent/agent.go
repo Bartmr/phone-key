@@ -21,7 +21,7 @@ import (
 
 // listKeysResponse is the JSON wrapper for a list-keys response.
 type listKeysResponse struct {
-	Type string            `json:"type"`
+	Type string             `json:"type"`
 	Keys []keyEntryResponse `json:"keys"`
 }
 
@@ -57,7 +57,9 @@ type errorResponse struct {
 
 // peekType extracts the "type" field from a JSON response.
 func peekType(data []byte) (string, error) {
-	var peek struct{ Type string `json:"type"` }
+	var peek struct {
+		Type string `json:"type"`
+	}
 	if err := json.Unmarshal(data, &peek); err != nil {
 		return "", err
 	}
@@ -130,6 +132,8 @@ func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
 		return nil, fmt.Errorf("failed to list keys: %w", err)
 	}
 
+	fmt.Fprintf(os.Stderr, "[ssh-agent] raw list-keys response: %s\n", string(response))
+
 	msgType, err := peekType(response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode list-keys response: %w", err)
@@ -166,11 +170,19 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResponse) ([]*agent.Key,
 	for _, item := range items {
 		// Skip keys without a public key (symmetric keys like AES, HMAC).
 		if item.PublicKeyBase64 == nil {
+			fmt.Fprintf(os.Stderr,
+				"[ssh-agent] List(): skipping '%s' — no public key (symmetric key: %s)\n",
+				item.Alias, item.Algorithm,
+			)
 			continue
 		}
 
 		// Skip keys that don't have the SIGN purpose.
 		if item.Purposes&purposeSign == 0 {
+			fmt.Fprintf(os.Stderr,
+				"[ssh-agent] List(): skipping '%s' — missing SIGN purpose (purposes=%d)\n",
+				item.Alias, item.Purposes,
+			)
 			continue
 		}
 
