@@ -175,8 +175,6 @@ func (c *Connection) SendMessage(jsonStr string) ([]byte, error) {
 
 // Disconnect tears down the BLE connection.
 func (c *Connection) Disconnect() {
-	fmt.Fprint(os.Stderr, "[bluetooth] disconnect...")
-
 	// UnwatchProperties blocks if nothing is reading from propCh,
 	// so drain it in a goroutine to unblock the teardown.
 	go func() {
@@ -185,6 +183,9 @@ func (c *Connection) Disconnect() {
 	}()
 	c.cancelWatch()
 
-	fmt.Fprint(os.Stderr, "[bluetooth] cancelled property watch, disconnecting device...")
-
+	if c.char != nil {
+		if err := c.char.StopNotify(); err != nil {
+			fmt.Fprintf(os.Stderr, "[bluetooth] stop notify error: %v\n", err)
+		}
+	}
 }
