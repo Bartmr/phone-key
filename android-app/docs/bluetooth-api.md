@@ -190,17 +190,20 @@ interface EchoRequest {
 
 **Response:**
 
-The `data` string echoed back verbatim as raw UTF-8 bytes. There is no JSON wrapper — it's the raw string bytes.
-
 ```ts
-type EchoResponse = ArrayBuffer;
+interface EchoResponse {
+  type: "echo-response";
+
+  /** The same `data` string from the request, echoed back. */
+  data: string;
+}
 ```
 
 **Example:**
 
 ```
 Client → Phone:  {"type":"echo","data":"ping"}
-Phone → Client:  ping
+Phone → Client:  {"type":"echo-response","data":"ping"}
 Phone → Client:  0x02
 ```
 

@@ -60,6 +60,10 @@ sealed class ServerMessage {
     data class SignResponse(val signature: String) : ServerMessage()
 
     @Serializable
+    @SerialName("echo-response")
+    data class EchoResponse(val data: String) : ServerMessage()
+
+    @Serializable
     @SerialName("error")
     data class Error(val message: String) : ServerMessage()
 }
@@ -242,7 +246,11 @@ fun rememberBleRequestsHandler(
                     }
                 }
                 is ClientMessage.Echo -> {
-                    bleServer.sendToClient(device, message.data.toByteArray(Charsets.UTF_8))
+                    val response = json.encodeToString(
+                        ServerMessage.serializer(),
+                        ServerMessage.EchoResponse(message.data),
+                    )
+                    bleServer.sendToClient(device, response.toByteArray(Charsets.UTF_8))
                 }
             }
         }
