@@ -72,11 +72,11 @@ sealed class ServerMessage {
     // --- Protocol-level errors (can happen at any time) ---
 
     @Serializable
-    @SerialName("unknown")
+    @SerialName("unknown-error")
     object UnknownError : ServerMessage()
 
     @Serializable
-    @SerialName("busy")
+    @SerialName("busy-error")
     object BusyError : ServerMessage()
 }
 
@@ -239,7 +239,7 @@ fun rememberBleRequestsHandler(
                         val responseJson = when (val result = signer.sign(entry.privateKey, dataToSign, algorithm, keyInfo, activity)) {
                             is KeystoreSignResult.Success -> {
                                 json.encodeToString(
-                                    ServerMessage.SignResult.serializer(),
+                                    ServerMessage.serializer(),
                                     ServerMessage.SignResult(
                                         signature = Base64.encodeToString(result.signature, Base64.NO_WRAP),
                                     ),
@@ -248,7 +248,7 @@ fun rememberBleRequestsHandler(
                             is KeystoreSignResult.Error -> {
                                 Log.e(TAG, "Sign failed: code=${result.code}, message=${result.message}")
                                 json.encodeToString(
-                                    ServerMessage.UnknownError.serializer(),
+                                    ServerMessage.serializer(),
                                     ServerMessage.UnknownError,
                                 )
                             }

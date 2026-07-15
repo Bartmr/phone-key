@@ -40,8 +40,8 @@ type keyEntryResult struct {
 	PublicKeyBase64                    *string  `json:"publicKeyBase64"`
 }
 
-// Android KeyProperties.PURPOSE_SIGN = 2
-const purposeSign = 2
+// Android KeyProperties.PURPOSE_SIGN = 4
+const purposeSign = 4
 
 // signResult is the JSON result for a successful sign command.
 type signResult struct {
@@ -49,10 +49,10 @@ type signResult struct {
 	Signature string `json:"signature"`
 }
 
-// errorResponse is the JSON response for any command error.
-type errorResponse struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
+// echoResult is the JSON response for a successful echo command.
+type echoResult struct {
+	Type string `json:"type"`
+	Data string `json:"data"`
 }
 
 // peekType extracts the "type" field from a JSON response.
@@ -146,12 +146,10 @@ func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
 			return nil, fmt.Errorf("failed to decode list-keys response: %w", err)
 		}
 		return a.keysFromEntries(parsed.Keys)
-	case "error":
-		var errResp errorResponse
-		if err := json.Unmarshal(response, &errResp); err != nil {
-			return nil, fmt.Errorf("failed to decode error response: %w", err)
-		}
-		return nil, fmt.Errorf("list-keys failed on device: %s", errResp.Message)
+	case "unknown-error":
+		return nil, fmt.Errorf("list-keys failed on device: unknown error")
+	case "busy-error":
+		return nil, fmt.Errorf("list-keys failed: device is busy with another command")
 	default:
 		return nil, fmt.Errorf("unexpected response type %q: %s", msgType, string(response))
 	}
@@ -341,12 +339,10 @@ func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, er
 			return nil, fmt.Errorf("failed to decode sign response: %w", err)
 		}
 		return a.buildSignature(key, signResp.Signature)
-	case "error":
-		var errResp errorResponse
-		if err := json.Unmarshal(response, &errResp); err != nil {
-			return nil, fmt.Errorf("failed to decode error response: %w", err)
-		}
-		return nil, fmt.Errorf("signing failed on device: %s", errResp.Message)
+	case "unknown-error":
+		return nil, fmt.Errorf("signing failed on device: unknown error")
+	case "busy-error":
+		return nil, fmt.Errorf("signing failed: device is busy with another command")
 	default:
 		return nil, fmt.Errorf("unexpected response type %q: %s", msgType, string(response))
 	}
