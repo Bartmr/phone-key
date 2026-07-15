@@ -133,8 +133,7 @@ func Connect(deviceAddress string) (*Connection, error) {
 }
 
 // SendMessageAndGetResponse writes a JSON string to the GATT characteristic and waits for a
-// framed response. The response is framed by a 0x01 start byte and a 0x02 end
-// byte. The function returns the accumulated payload without the framing bytes.
+// framed response. The function returns the accumulated payload without the framing bytes.
 func (c *Connection) SendMessageAndGetResponse(jsonStr []byte) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
