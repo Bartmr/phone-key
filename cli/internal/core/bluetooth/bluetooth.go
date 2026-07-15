@@ -154,7 +154,7 @@ func (c *Connection) SendMessageAndGetResponse(jsonStr []byte) ([]byte, error) {
 
 			chunk, ok := prop.Value.([]byte)
 			if !ok {
-				continue
+				return nil, fmt.Errorf("unexpected GATT property value type: %T", prop.Value)
 			}
 
 			payload, err := fr.feed(chunk)
