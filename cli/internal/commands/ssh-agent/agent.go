@@ -19,14 +19,14 @@ import (
 	"phone-key-cli/internal/core/bluetooth"
 )
 
-// listKeysResponse is the JSON wrapper for a list-keys response.
-type listKeysResponse struct {
-	Type string             `json:"type"`
-	Keys []keyEntryResponse `json:"keys"`
+// listKeysResult is the JSON wrapper for a list-keys result.
+type listKeysResult struct {
+	Type string           `json:"type"`
+	Keys []keyEntryResult `json:"keys"`
 }
 
-// keyEntryResponse matches the JSON the phone sends for each key.
-type keyEntryResponse struct {
+// keyEntryResult matches the JSON the phone sends for each key.
+type keyEntryResult struct {
 	Alias                              string   `json:"alias"`
 	Algorithm                          string   `json:"algorithm"`
 	KeySize                            int      `json:"keySize"`
@@ -43,8 +43,8 @@ type keyEntryResponse struct {
 // Android KeyProperties.PURPOSE_SIGN = 2
 const purposeSign = 2
 
-// signResponse is the JSON response for a successful sign command.
-type signResponse struct {
+// signResult is the JSON result for a successful sign command.
+type signResult struct {
 	Type      string `json:"type"`
 	Signature string `json:"signature"`
 }
@@ -112,7 +112,7 @@ func (a *PhoneKeyAgent) sendMessage(jsonStr string) ([]byte, error) {
 		return nil, err
 	}
 
-	response, err := conn.SendMessage([]byte(jsonStr))
+	response, err := conn.SendMessageAndGetResponse([]byte(jsonStr))
 	if err != nil {
 		// Discard broken connection so the next call creates a fresh one.
 		a.mu.Lock()
@@ -140,8 +140,8 @@ func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
 	}
 
 	switch msgType {
-	case "list-keys-response":
-		var parsed listKeysResponse
+	case "list-keys-result":
+		var parsed listKeysResult
 		if err := json.Unmarshal(response, &parsed); err != nil {
 			return nil, fmt.Errorf("failed to decode list-keys response: %w", err)
 		}
@@ -159,7 +159,7 @@ func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
 
 // keysFromEntries converts key entry responses from the phone into SSH agent keys,
 // caching the identities for later Sign calls.
-func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResponse) ([]*agent.Key, error) {
+func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, error) {
 
 	a.mu.Lock()
 	a.identities = nil
@@ -335,8 +335,8 @@ func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, er
 	}
 
 	switch msgType {
-	case "sign-response":
-		var signResp signResponse
+	case "sign-result":
+		var signResp signResult
 		if err := json.Unmarshal(response, &signResp); err != nil {
 			return nil, fmt.Errorf("failed to decode sign response: %w", err)
 		}

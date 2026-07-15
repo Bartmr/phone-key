@@ -22,9 +22,7 @@ const (
 type Connection struct {
 	device *device.Device1
 	char   *gatt.GattCharacteristic1
-
-	propCh      chan *bluez.PropertyChanged
-	cancelWatch func()
+	propCh chan *bluez.PropertyChanged
 }
 
 // Connect establishes a BLE connection to the given device address.
@@ -128,50 +126,67 @@ func Connect(deviceAddress string) (*Connection, error) {
 	fmt.Fprintln(os.Stderr, "[bluetooth] notifications enabled, connection established")
 
 	return &Connection{
-		device:      dev,
-		char:        targetChar,
-		propCh:      propCh,
-		cancelWatch: func() { targetChar.UnwatchProperties(propCh) },
+		device: dev,
+		char:   targetChar,
+		propCh: propCh,
 	}, nil
 }
 
-// SendMessage writes a JSON string to the GATT characteristic and waits for a
+// SendMessageAndGetResponse writes a JSON string to the GATT characteristic and waits for a
 // framed response. The response is framed by a 0x01 start byte and a 0x02 end
 // byte. The function returns the accumulated payload without the framing bytes.
-func (c *Connection) SendMessage(jsonStr []byte) ([]byte, error) {
+func (c *Connection) SendMessageAndGetResponse(jsonStr []byte) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	type result struct {
+		payload []byte
+		err     error
+	}
+	resultCh := make(chan result, 1)
+
+	// Start reading from propCh BEFORE WriteValue so the consumer is
+	// already waiting when the response notification arrives. Otherwise
+	// the WatchProperties goroutine (which uses an unbuffered channel)
+	// would block trying to deliver the PropertyChanged event until we
+	// enter the select, creating a race window.
+	go func() {
+		var fr frameReader
+		for {
+			select {
+			case prop := <-c.propCh:
+				if prop == nil || prop.Name != "Value" {
+					continue
+				}
+
+				chunk, ok := prop.Value.([]byte)
+				if !ok {
+					continue
+				}
+
+				payload, err := fr.feed(chunk)
+				if err != nil {
+					resultCh <- result{err: err}
+					return
+				}
+				if payload != nil {
+					resultCh <- result{payload: payload}
+					return
+				}
+			case <-ctx.Done():
+				resultCh <- result{err: fmt.Errorf("timed out waiting for response from device")}
+				return
+			}
+		}
+	}()
+
 	err := c.char.WriteValue(jsonStr, map[string]interface{}{"type": "reliable"})
 	if err != nil {
 		return nil, fmt.Errorf("GATT write failed: %w", err)
 	}
 
-	// Read response chunks framed by 0x01 (start) and 0x02 (end), with 60 s timeout.
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	var fr frameReader
-	for {
-		select {
-		case prop := <-c.propCh:
-			if prop == nil || prop.Name != "Value" {
-				continue
-			}
-
-			chunk, ok := prop.Value.([]byte)
-			if !ok {
-				continue
-			}
-
-			payload, err := fr.feed(chunk)
-			if err != nil {
-				return nil, err
-			}
-			if payload != nil {
-				return payload, nil
-			}
-		case <-ctx.Done():
-			return nil, fmt.Errorf("timed out waiting for response from device")
-		}
-	}
+	res := <-resultCh
+	return res.payload, res.err
 }
 
 // Disconnect tears down the BLE connection.
@@ -182,7 +197,8 @@ func (c *Connection) Disconnect() {
 		for range c.propCh {
 		}
 	}()
-	c.cancelWatch()
+
+	c.char.UnwatchProperties(c.propCh)
 
 	if c.char != nil {
 		if err := c.char.StopNotify(); err != nil {

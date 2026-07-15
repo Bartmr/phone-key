@@ -1,7 +1,5 @@
 package bluetooth
 
-import "fmt"
-
 // frameReader accumulates byte chunks delimited by 0x01 (start) and 0x02 (end).
 // It is not safe for concurrent use.
 type frameReader struct {
@@ -20,9 +18,6 @@ func (r *frameReader) feed(chunk []byte) ([]byte, error) {
 	}
 
 	if len(chunk) == 1 && chunk[0] == 0x02 {
-		if len(r.buf) == 0 {
-			return nil, fmt.Errorf("empty response received from device")
-		}
 		return r.buf, nil
 	}
 

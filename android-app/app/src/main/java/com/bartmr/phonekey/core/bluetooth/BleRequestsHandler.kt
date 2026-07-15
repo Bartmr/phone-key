@@ -19,7 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import com.bartmr.phonekey.core.keystore.KeyStoreRepository
 import com.bartmr.phonekey.core.keystore.KeystoreSigner
-import com.bartmr.phonekey.core.keystore.SignResult
+import com.bartmr.phonekey.core.keystore.SignResult as KeystoreSignResult
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -52,16 +52,16 @@ sealed class ClientMessage {
 @Serializable
 sealed class ServerMessage {
     @Serializable
-    @SerialName("list-keys-response")
-    data class ListKeysResponse(val keys: List<KeyEntryResponse>) : ServerMessage()
+    @SerialName("list-keys-result")
+    data class ListKeysResult(val keys: List<KeyEntryResult>) : ServerMessage()
 
     @Serializable
-    @SerialName("sign-response")
-    data class SignResponse(val signature: String) : ServerMessage()
+    @SerialName("sign-result")
+    data class SignResult(val signature: String) : ServerMessage()
 
     @Serializable
-    @SerialName("echo-response")
-    data class EchoResponse(val data: String) : ServerMessage()
+    @SerialName("echo-result")
+    data class EchoResult(val data: String) : ServerMessage()
 
     @Serializable
     @SerialName("error")
@@ -69,7 +69,7 @@ sealed class ServerMessage {
 }
 
 @Serializable
-data class KeyEntryResponse(
+data class KeyEntryResult(
     val alias: String,
     val algorithm: String,
     val keySize: Int,
@@ -195,7 +195,7 @@ fun rememberBleRequestsHandler(
                             null
                         }
 
-                        KeyEntryResponse(
+                        KeyEntryResult(
                             alias = keyInfo.alias,
                             algorithm = keyInfo.algorithm,
                             keySize = keyInfo.keySize,
@@ -211,7 +211,7 @@ fun rememberBleRequestsHandler(
                     }
                     val response = json.encodeToString(
                         ServerMessage.serializer(),
-                        ServerMessage.ListKeysResponse(entries),
+                        ServerMessage.ListKeysResult(entries),
                     )
                     bleServer.sendToClient(device, response.toByteArray(Charsets.UTF_8))
                     currentCommand.set(null)
@@ -225,15 +225,15 @@ fun rememberBleRequestsHandler(
                     val algorithm = message.algorithm ?: KeystoreSigner.deriveAlgorithm(keyInfo)
                     coroutineScope.launch {
                         val responseJson = when (val result = signer.sign(entry.privateKey, dataToSign, algorithm, keyInfo, activity)) {
-                            is SignResult.Success -> {
+                            is KeystoreSignResult.Success -> {
                                 json.encodeToString(
-                                    ServerMessage.SignResponse.serializer(),
-                                    ServerMessage.SignResponse(
+                                    ServerMessage.SignResult.serializer(),
+                                    ServerMessage.SignResult(
                                         signature = Base64.encodeToString(result.signature, Base64.NO_WRAP),
                                     ),
                                 )
                             }
-                            is SignResult.Error -> {
+                            is KeystoreSignResult.Error -> {
                                 Log.e(TAG, "Sign failed: code=${result.code}, message=${result.message}")
                                 json.encodeToString(
                                     ServerMessage.Error.serializer(),
@@ -248,7 +248,7 @@ fun rememberBleRequestsHandler(
                 is ClientMessage.Echo -> {
                     val response = json.encodeToString(
                         ServerMessage.serializer(),
-                        ServerMessage.EchoResponse(message.data),
+                        ServerMessage.EchoResult(message.data),
                     )
                     bleServer.sendToClient(device, response.toByteArray(Charsets.UTF_8))
                 }

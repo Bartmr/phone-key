@@ -98,8 +98,8 @@ No additional fields.
   publicKeyBase64: string | null;
 }
 
-interface ListKeysResponse {
-  type: "list-keys-response";
+interface ListKeysResult {
+  type: "list-keys-result";
   keys: KeyEntry[];
 }
 ```
@@ -115,7 +115,7 @@ interface ListKeysResponse {
 ```
 Client → Phone:  {"type":"list-keys"}
 Phone → Client:  0x01
-Phone → Client:  {"type":"list-keys-response","keys":[{"alias":"my-key","algorithm":"EC","keySize":256,...}]}
+Phone → Client:  {"type":"list-keys-result","keys":[{"alias":"my-key","algorithm":"EC","keySize":256,...}]}
 Phone → Client:  0x02
 ```
 
@@ -149,8 +149,8 @@ interface SignRequest {
 /**
  * Successful sign response.
  */
-interface SignResponse {
-  type: "sign-response";
+interface SignResult {
+  type: "sign-result";
 
   /**
    * Base64-encoded signature bytes from `Signature.sign()`.
@@ -172,7 +172,7 @@ interface SignResponse {
 Client → Phone:  {"type":"sign","keyAlias":"my-key","data":"AAAAIGZsNThuNnJm...","algorithm":"SHA256withECDSA"}
                  (phone shows biometric prompt; user authenticates)
 Phone → Client:  0x01
-Phone → Client:  {"type":"sign-response","signature":"MEUCIQDfn0jA..."}
+Phone → Client:  {"type":"sign-result","signature":"MEUCIQDfn0jA..."}
 Phone → Client:  0x02
 ```
 
@@ -194,8 +194,8 @@ interface EchoRequest {
 **Response:**
 
 ```ts
-interface EchoResponse {
-  type: "echo-response";
+interface EchoResult {
+  type: "echo-result";
 
   /** The same `data` string from the request, echoed back. */
   data: string;
@@ -207,7 +207,7 @@ interface EchoResponse {
 ```
 Client → Phone:  {"type":"echo","data":"ping"}
 Phone → Client:  0x01
-Phone → Client:  {"type":"echo-response","data":"ping"}
+Phone → Client:  {"type":"echo-result","data":"ping"}
 Phone → Client:  0x02
 ```
 
