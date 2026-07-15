@@ -135,57 +135,39 @@ func Connect(deviceAddress string) (*Connection, error) {
 // SendMessageAndGetResponse writes a JSON string to the GATT characteristic and waits for a
 // framed response. The function returns the accumulated payload without the framing bytes.
 func (c *Connection) SendMessageAndGetResponse(jsonStr []byte) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	type result struct {
-		payload []byte
-		err     error
-	}
-	resultCh := make(chan result, 1)
-
-	// Start reading from propCh BEFORE WriteValue so the consumer is
-	// already waiting when the response notification arrives. Otherwise
-	// the WatchProperties goroutine (which uses an unbuffered channel)
-	// would block trying to deliver the PropertyChanged event until we
-	// enter the select, creating a race window.
-	go func() {
-		var fr frameReader
-		for {
-			select {
-			case prop := <-c.propCh:
-				if prop == nil || prop.Name != "Value" {
-					continue
-				}
-
-				chunk, ok := prop.Value.([]byte)
-				if !ok {
-					continue
-				}
-
-				payload, err := fr.feed(chunk)
-				if err != nil {
-					resultCh <- result{err: err}
-					return
-				}
-				if payload != nil {
-					resultCh <- result{payload: payload}
-					return
-				}
-			case <-ctx.Done():
-				resultCh <- result{err: fmt.Errorf("timed out waiting for response from device")}
-				return
-			}
-		}
-	}()
-
 	err := c.char.WriteValue(jsonStr, map[string]interface{}{"type": "reliable"})
 	if err != nil {
 		return nil, fmt.Errorf("GATT write failed: %w", err)
 	}
 
-	res := <-resultCh
-	return res.payload, res.err
+	// Read response chunks
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	var fr frameReader
+	for {
+		select {
+		case prop := <-c.propCh:
+			if prop == nil || prop.Name != "Value" {
+				continue
+			}
+
+			chunk, ok := prop.Value.([]byte)
+			if !ok {
+				continue
+			}
+
+			payload, err := fr.feed(chunk)
+			if err != nil {
+				return nil, err
+			}
+			if payload != nil {
+				return payload, nil
+			}
+		case <-ctx.Done():
+			return nil, fmt.Errorf("timed out waiting for response from device")
+		}
+	}
 }
 
 // Disconnect tears down the BLE connection.
