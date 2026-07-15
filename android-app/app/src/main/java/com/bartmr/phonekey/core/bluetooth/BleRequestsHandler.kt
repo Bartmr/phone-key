@@ -3,6 +3,7 @@ package com.bartmr.phonekey.core.bluetooth
 import android.Manifest
 import android.os.Build
 import android.util.Base64
+import android.util.Log
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,28 +18,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import com.bartmr.phonekey.core.keystore.KeyStoreRepository
-import com.bartmr.phonekey.core.ssh.SignResult
-import com.bartmr.phonekey.core.ssh.Ssh
+import com.bartmr.phonekey.core.keystore.KeystoreSigner
+import com.bartmr.phonekey.core.keystore.SignResult as KeystoreSignResult
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.security.KeyStore
-import java.security.interfaces.ECPublicKey
 import java.util.concurrent.atomic.AtomicReference
 
 @Serializable
 sealed class ClientMessage {
     @Serializable
-    @SerialName("ssh-request-identities")
-    class RequestIdentities : ClientMessage()
+    @SerialName("list-keys")
+    class ListKeys : ClientMessage()
 
     @Serializable
-    @SerialName("ssh-sign")
-    data class SshSign(
+    @SerialName("sign")
+    data class Sign(
         val keyAlias: String,
         val data: String,
+        val algorithm: String? = null,
     ) : ClientMessage()
 
     @Serializable
@@ -50,16 +50,57 @@ sealed class ClientMessage {
 }
 
 @Serializable
-data class IdentityResponse(val alias: String, val publicKeyBase64: String)
+sealed class ServerMessage {
+    // --- list-keys ---
 
-sealed class CommandState {
-    data object RequestingIdentities : CommandState()
-    data class Signing(val keyAlias: String) : CommandState()
+    @Serializable
+    @SerialName("list-keys-result")
+    data class ListKeysResult(val keys: List<KeyEntryResult>) : ServerMessage()
+
+    // --- sign ---
+
+    @Serializable
+    @SerialName("sign-result")
+    data class SignResult(val signature: String) : ServerMessage()
+
+    // --- echo ---
+
+    @Serializable
+    @SerialName("echo-result")
+    data class EchoResult(val data: String) : ServerMessage()
+
+    // --- Protocol-level errors (can happen at any time) ---
+
+    @Serializable
+    @SerialName("unknown-error")
+    object UnknownError : ServerMessage()
+
+    @Serializable
+    @SerialName("busy-error")
+    object BusyError : ServerMessage()
 }
 
 @Serializable
-data class ErrorResponse(val error: String)
+data class KeyEntryResult(
+    val alias: String,
+    val algorithm: String,
+    val keySize: Int,
+    val purposes: Int,
+    val digests: List<String>,
+    val signaturePaddings: List<String>,
+    val encryptionPaddings: List<String>,
+    val blockModes: List<String>,
+    val userAuthenticationRequired: Boolean,
+    val userAuthenticationValidityDurationSeconds: Int,
+    val publicKeyBase64: String? = null,
+)
 
+sealed class CommandState {
+    data object ListingKeys : CommandState()
+    data class Signing(val keyAlias: String) : CommandState()
+}
+
+private const val TAG = "BleRequestsHandler"
 private val json = Json { ignoreUnknownKeys = true; classDiscriminator = "type" }
 
 class BleServerState(
@@ -132,7 +173,7 @@ fun rememberBleRequestsHandler(
         onDispose {  }
     }
 
-    val ssh = remember { Ssh(activity) }
+    val signer = remember { KeystoreSigner() }
     val currentCommand = remember { AtomicReference<CommandState?>(null) }
 
     DisposableEffect(bleServer) {
@@ -141,56 +182,87 @@ fun rememberBleRequestsHandler(
             val message = json.decodeFromString<ClientMessage>(text)
 
             val commandState: CommandState? = when (message) {
-                is ClientMessage.RequestIdentities -> CommandState.RequestingIdentities
-                is ClientMessage.SshSign -> CommandState.Signing(message.keyAlias)
+                is ClientMessage.ListKeys -> CommandState.ListingKeys
+                is ClientMessage.Sign -> CommandState.Signing(message.keyAlias)
                 is ClientMessage.Echo -> null
             }
 
             if (commandState != null && !currentCommand.compareAndSet(null, commandState)) {
-                val busy = json.encodeToString(ErrorResponse.serializer(), ErrorResponse("busy"))
+                val busy = json.encodeToString(ServerMessage.serializer(), ServerMessage.BusyError)
                 bleServer.sendToClient(device, busy.toByteArray(Charsets.UTF_8))
                 return@handler
             }
 
             when (message) {
-                is ClientMessage.RequestIdentities -> {
+                is ClientMessage.ListKeys -> {
                     val ks = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
-                    val identities = keyStoreRepository.listAliases().mapNotNull { alias ->
-                        val entry = ks.getEntry(alias, null) as? KeyStore.PrivateKeyEntry
-                            ?: return@mapNotNull null
-                        if (entry.certificate.publicKey !is ECPublicKey) return@mapNotNull null
-                        val publicKey = ssh.getPublicKey(entry)
-                        val publicKeyBase64 = Base64.encodeToString(
-                            publicKey.toByteArray(Charsets.UTF_8),
-                            Base64.NO_WRAP,
+                    val entries = keyStoreRepository.listAliases().mapNotNull { alias ->
+                        val entry = ks.getEntry(alias, null) ?: return@mapNotNull null
+                        val keyInfo = keyStoreRepository.getKeyInfo(alias)
+
+                        val publicKeyBase64: String? = if (entry is KeyStore.PrivateKeyEntry) {
+                            val publicKeyBytes = signer.getPublicKeyBytes(entry)
+                            Base64.encodeToString(publicKeyBytes, Base64.NO_WRAP)
+                        } else {
+                            null
+                        }
+
+                        KeyEntryResult(
+                            alias = keyInfo.alias,
+                            algorithm = keyInfo.algorithm,
+                            keySize = keyInfo.keySize,
+                            purposes = keyInfo.purposes,
+                            digests = keyInfo.digests,
+                            signaturePaddings = keyInfo.signaturePaddings,
+                            encryptionPaddings = keyInfo.encryptionPaddings,
+                            blockModes = keyInfo.blockModes,
+                            userAuthenticationRequired = keyInfo.userAuthenticationRequired,
+                            userAuthenticationValidityDurationSeconds = keyInfo.userAuthenticationValidityDurationSeconds,
+                            publicKeyBase64 = publicKeyBase64,
                         )
-                        IdentityResponse(alias, publicKeyBase64)
                     }
                     val response = json.encodeToString(
-                        ListSerializer(IdentityResponse.serializer()),
-                        identities,
+                        ServerMessage.serializer(),
+                        ServerMessage.ListKeysResult(entries),
                     )
                     bleServer.sendToClient(device, response.toByteArray(Charsets.UTF_8))
                     currentCommand.set(null)
                 }
-                is ClientMessage.SshSign -> {
+                is ClientMessage.Sign -> {
                     val keyInfo = keyStoreRepository.getKeyInfo(message.keyAlias)
                     val ks = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
                     val entry = ks.getEntry(message.keyAlias, null) as? KeyStore.PrivateKeyEntry
                         ?: throw IllegalStateException("Key entry not found for alias: ${message.keyAlias}")
                     val dataToSign = Base64.decode(message.data, Base64.DEFAULT)
+                    val algorithm = message.algorithm ?: KeystoreSigner.deriveAlgorithm(keyInfo)
                     coroutineScope.launch {
-                        when (val result = ssh.sign(keyInfo, entry, dataToSign)) {
-                            is SignResult.Success ->
-                                bleServer.sendToClient(device, result.rawSignature)
-                            is SignResult.Error ->
-                                bleServer.sendToClient(device, ByteArray(0))
+                        val responseJson = when (val result = signer.sign(entry.privateKey, dataToSign, algorithm, keyInfo, activity)) {
+                            is KeystoreSignResult.Success -> {
+                                json.encodeToString(
+                                    ServerMessage.serializer(),
+                                    ServerMessage.SignResult(
+                                        signature = Base64.encodeToString(result.signature, Base64.NO_WRAP),
+                                    ),
+                                )
+                            }
+                            is KeystoreSignResult.Error -> {
+                                Log.e(TAG, "Sign failed: code=${result.code}, message=${result.message}")
+                                json.encodeToString(
+                                    ServerMessage.serializer(),
+                                    ServerMessage.UnknownError,
+                                )
+                            }
                         }
+                        bleServer.sendToClient(device, responseJson.toByteArray(Charsets.UTF_8))
                         currentCommand.set(null)
                     }
                 }
                 is ClientMessage.Echo -> {
-                    bleServer.sendToClient(device, message.data.toByteArray(Charsets.UTF_8))
+                    val response = json.encodeToString(
+                        ServerMessage.serializer(),
+                        ServerMessage.EchoResult(message.data),
+                    )
+                    bleServer.sendToClient(device, response.toByteArray(Charsets.UTF_8))
                 }
             }
         }

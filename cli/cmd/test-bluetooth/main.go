@@ -56,7 +56,7 @@ func main() {
 
 	resultCh := make(chan result, 1)
 	go func() {
-		data, err := conn.SendMessage(string(messageJSON))
+		data, err := conn.SendMessageAndGetResponse([]byte(messageJSON))
 		resultCh <- result{data, err}
 	}()
 

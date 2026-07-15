@@ -22,43 +22,32 @@ The connection requires Bluetooth pairing with MITM protection — both devices 
 ### Data flow
 
 - **Computer → Phone**: Write to the characteristic (GATT Write).
-- **Phone → Computer**: Send a notification (GATT Notify) with the response payload, followed by a second notification containing the single byte `0x02` as a terminator.
+- **Phone → Computer**: The response is framed by three notifications: a `0x01` start byte, the response payload, and a `0x02` end byte. The payload may be split across multiple notifications if it exceeds the MTU.
 
 ```
  Client (computer)                      Server (phone)
         |                                      |
         |--- GATT Write (JSON command) ------->|
         |                                      |  process command
+        |<-- GATT Notify (0x01 start) ---------|
         |<-- GATT Notify (response payload) ---|
-        |<-- GATT Notify (0x02 terminator) ----|
+        |<-- GATT Notify (0x02 end) -----------|
         |                                      |
 ```
-
-## Message format
-
-### Type discriminator
-
-Every message from the client **must** include a `"type"` field. The server uses it to deserialize into the correct message class:
-
-| `type` value | Direction | Description |
-|---|---|---|
-| `"ssh-request-identities"` | Client → Server | Request the list of available SSH keys |
-| `"ssh-sign"` | Client → Server | Request a cryptographic signature |
-| `"echo"` | Client → Server | Echo test (connectivity check) |
 
 ---
 
 ## Commands (Client → Server)
 
-### 1. `ssh-request-identities`
+### 1. `list-keys`
 
-Ask the phone for all available SSH public keys.
+Ask the phone for all available keys in the Android KeyStore, with full metadata and public key bytes.
 
 **Request:**
 
-```json
-{
-  "type": "ssh-request-identities"
+```ts
+interface ListKeysRequest {
+  type: "list-keys";
 }
 ```
 
@@ -66,63 +55,126 @@ No additional fields.
 
 **Response:**
 
-A JSON array of identity objects:
-
-```json
-[
-  {
-    "alias": "my-github-key",
-    "publicKeyBase64": "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQ..."
-  }
-]
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `alias` | string | The Android KeyStore alias for this key. Used in `ssh-sign` to identify which key to sign with. |
-| `publicKeyBase64` | string | The SSH-format public key (e.g. `ecdsa-sha2-nistp256 AAAA...`), base64-encoded (standard encoding). |
-
-**Details:**
-
-- Only **EC keys** (ECPublicKey) are returned. Keys from other algorithms (e.g. RSA) are silently skipped.
-- The phone loads keys from the Android KeyStore and cross-references them with the app's own key metadata repository.
-- An empty array `[]` is returned if no keys are enrolled.
-
-### 2. `ssh-sign`
-
-Ask the phone to sign data with a specific key. This triggers biometric authentication (fingerprint / face) because the private key is hardware-backed and requires user verification.
-
-**Request:**
-
-```json
+```ts
 {
-  "type": "ssh-sign",
-  "keyAlias": "my-github-key",
-  "data": "AAAAIGZsNThuNnJmSnBOK1NLTDFoMzhuM3h0QkJpQXNmQ2t3"
+  /** The Android KeyStore alias for this key. Used in `sign` to identify which key to sign with. */
+  alias: string;
+
+  /** Key algorithm: `"EC"`, `"RSA"`, `"AES"`, `"HMAC"` or others. */
+  algorithm: string;
+
+  /** Key size in bits (e.g. 256, 2048). */
+  keySize: number;
+
+  /**
+   * Bitmask of `KeyProperties.PURPOSE_*` values.
+   * `2` = SIGN, `1` = VERIFY, `4` = ENCRYPT, `8` = DECRYPT.
+   */
+  purposes: number;
+
+  /** Configured digest algorithms (e.g. `["SHA-256"]`). */
+  digests: string[];
+
+  /** Configured signature padding schemes. */
+  signaturePaddings: string[];
+
+  /** Configured encryption padding schemes. */
+  encryptionPaddings: string[];
+
+  /** Configured block cipher modes. */
+  blockModes: string[];
+
+  /** Whether biometric/device-credential authentication is required to use this key. */
+  userAuthenticationRequired: boolean;
+
+  /** How long after authentication the key can be reused without re-authenticating. */
+  userAuthenticationValidityDurationSeconds: number;
+
+  /**
+   * X.509 SubjectPublicKeyInfo DER bytes, base64-encoded.
+   * Only present for asymmetric key pairs (`PrivateKeyEntry`).
+   * `null` for symmetric keys (`SecretKeyEntry`).
+   */
+  publicKeyBase64: string | null;
+}
+
+interface ListKeysResult {
+  type: "list-keys-result";
+  keys: KeyEntry[];
 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `type` | string | Must be `"ssh-sign"`. |
-| `keyAlias` | string | The alias of the key to sign with (from the `ssh-request-identities` response). |
-| `data` | string | The data to sign, base64-encoded (standard encoding). This is typically the SSH signing payload (session identifier concatenated with data-to-be-signed). |
+**Details:**
 
-**Response (success):**
+- All keys from the Android KeyStore are returned — symmetric (AES, HMAC) and asymmetric (EC, RSA).
+- The client is responsible for filtering keys based on algorithm and purposes.
+- An empty array `[]` is returned in `keys` if no keys are enrolled.
 
-Raw bytes — the ECDSA signature as the concatenation of `r || s` (both as fixed-length big-endian integers). The byte length depends on the curve:
+**Example:**
 
-| Curve | Signature length |
-|---|---|
-| P-256 (`ecdsa-sha2-nistp256`) | 64 bytes (r: 32, s: 32) |
-| P-384 (`ecdsa-sha2-nistp384`) | 96 bytes (r: 48, s: 48) |
-| P-521 (`ecdsa-sha2-nistp521`) | 132 bytes (r: 66, s: 66) |
+```
+Client → Phone:  {"type":"list-keys"}
+Phone → Client:  0x01
+Phone → Client:  {"type":"list-keys-result","keys":[{"alias":"my-key","algorithm":"EC","keySize":256,...}]}
+Phone → Client:  0x02
+```
 
-The client is responsible for encoding this into the SSH signature blob format (mpint length-prefixed `r` and `s`).
+### 2. `sign`
 
-**Response (error):**
+Ask the phone to sign data with a specific asymmetric key. If the key requires user authentication, this triggers biometric authentication (fingerprint / face).
 
-An empty byte array (zero-length).
+**Request:**
+
+```ts
+interface SignRequest {
+  type: "sign";
+
+  /** The alias of the key to sign with (from the `list-keys` response). */
+  keyAlias: string;
+
+  /** The data to sign, base64-encoded (standard encoding). */
+  data: string;
+
+  /**
+   * Java `Signature` algorithm string (e.g. `"SHA256withECDSA"`, `"SHA512withRSA"`).
+   * If omitted, the phone derives it from the key's first configured digest and algorithm.
+   */
+  algorithm?: string;
+}
+```
+
+**Response:**
+
+```ts
+/**
+ * Successful sign response.
+ */
+interface SignResult {
+  type: "sign-result";
+
+  /**
+   * Base64-encoded signature bytes from `Signature.sign()`.
+   *
+   * The raw bytes depend on the algorithm:
+   * - **ECDSA**: DER-encoded ASN.1 signature (sequence of two INTEGERs: r and s).
+   * - **RSA**: Raw big-endian signature bytes (PKCS#1 v1.5 or PSS, depending on key configuration).
+   *
+   * The client is responsible for encoding this into the appropriate protocol format
+   * (e.g. SSH signature blob with mpint encoding).
+   */
+  signature: string;
+}
+```
+
+**Example:**
+
+```
+Client → Phone:  {"type":"sign","keyAlias":"my-key","data":"AAAAIGZsNThuNnJm...","algorithm":"SHA256withECDSA"}
+                 (phone shows biometric prompt; user authenticates)
+Phone → Client:  0x01
+Phone → Client:  {"type":"sign-result","signature":"MEUCIQDfn0jA..."}
+Phone → Client:  0x02
+```
 
 ### 3. `echo`
 
@@ -130,87 +182,53 @@ Simple ping/pong for connectivity testing.
 
 **Request:**
 
-```json
-{
-  "type": "echo",
-  "data": "hello"
+```ts
+interface EchoRequest {
+  type: "echo";
+
+  /** Arbitrary string to echo back. */
+  data: string;
 }
 ```
 
 **Response:**
 
-The `data` string echoed back verbatim as raw UTF-8 bytes. There is no JSON wrapper — it's the raw string bytes.
+```ts
+interface EchoResult {
+  type: "echo-result";
 
----
-
-## Error responses (Server → Client)
-
-### Busy error
-
-The phone processes only **one command at a time**. If a new command arrives while another is still in progress, the phone immediately responds with:
-
-```json
-{
-  "error": "busy"
+  /** The same `data` string from the request, echoed back. */
+  data: string;
 }
 ```
 
-The client should retry after a short delay.
-
----
-
-## Concurrency model
-
-The phone enforces sequential command processing with an `AtomicReference<CommandState>`:
-
-1. A command arrives and is parsed.
-2. If the command requires a state transition (i.e. it's not an `echo`):
-   - The phone attempts to CAS (compare-and-swap) the current state from `null` to the new command state.
-   - If CAS fails (another command is in progress), it responds with `{"error": "busy"}` and stops processing.
-3. When the command completes, the state is reset to `null`.
-
-`echo` commands are exempt from this lock — they always execute regardless of current state.
-
----
-
-## Full exchange examples
-
-### Listing identities
-
-```
-Client → Phone:  {"type":"ssh-request-identities"}
-Phone → Client:  [{"alias":"my-key","publicKeyBase64":"c3NoLWVkMjU1MTk..."}]
-Phone → Client:  0x02
-```
-
-### Signing
-
-```
-Client → Phone:  {"type":"ssh-sign","keyAlias":"my-key","data":"AAAAIGZsNThuNnJm..."}
-                 (phone shows biometric prompt; user authenticates)
-Phone → Client:  <64 raw bytes (P-256 r||s)>
-Phone → Client:  0x02
-```
-
-### Echo
+**Example:**
 
 ```
 Client → Phone:  {"type":"echo","data":"ping"}
-Phone → Client:  ping
+Phone → Client:  0x01
+Phone → Client:  {"type":"echo-result","data":"ping"}
 Phone → Client:  0x02
 ```
 
-### Busy rejection
+## Protocol-level errors (Server → Client)
 
+These can happen at any time — they are not specific to a particular command.
+
+```ts
+interface UnknownError {
+  type: "unknown";
+}
+
+interface BusyError {
+  type: "busy";
+}
 ```
-Client → Phone:  {"type":"ssh-sign","keyAlias":"my-key","data":"AAAAIGZ..."}
-Client → Phone:  {"type":"ssh-request-identities"}     ← sent before sign completes
-Phone → Client:  {"error":"busy"}
-Phone → Client:  0x02
-                 ... later, the sign completes ...
-Phone → Client:  <64 raw bytes>
-Phone → Client:  0x02
-```
+
+- **`unknown`** — an unexpected internal error occurred.
+- **`busy`** — the server is already processing a request and cannot accept another one concurrently.
+
+Command-specific errors (like `sign-error`) are documented together with their respective commands above.
 
 ---
 
@@ -218,5 +236,3 @@ Phone → Client:  0x02
 
 - **BLE pairing**: The GATT characteristic requires `ENCRYPTED_MITM` — the connection is encrypted and MITM-protected. Both devices display a pairing code.
 - **Hardware-backed keys**: Private keys are generated and stored in the Android KeyStore backed by the Trusted Execution Environment (TEE) or Secure Element. They never leave the secure hardware.
-- **Biometric binding**: Each signing operation requires the user to authenticate with biometrics (fingerprint or face). The `KeyProperties.AUTH_BIOMETRIC_STRONG` requirement is enforced by the secure hardware, not the app.
-- **Single-command locking**: Only one sensitive command (sign or list-identities) may be in flight at a time, preventing interleaving attacks.

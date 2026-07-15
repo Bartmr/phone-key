@@ -22,9 +22,7 @@ const (
 type Connection struct {
 	device *device.Device1
 	char   *gatt.GattCharacteristic1
-
-	propCh      chan *bluez.PropertyChanged
-	cancelWatch func()
+	propCh chan *bluez.PropertyChanged
 }
 
 // Connect establishes a BLE connection to the given device address.
@@ -128,45 +126,44 @@ func Connect(deviceAddress string) (*Connection, error) {
 	fmt.Fprintln(os.Stderr, "[bluetooth] notifications enabled, connection established")
 
 	return &Connection{
-		device:      dev,
-		char:        targetChar,
-		propCh:      propCh,
-		cancelWatch: func() { targetChar.UnwatchProperties(propCh) },
+		device: dev,
+		char:   targetChar,
+		propCh: propCh,
 	}, nil
 }
 
-// SendMessage writes a JSON string to the GATT characteristic and waits for a
-// framed response. The response is delimited by a single 0x02 byte (same protocol
-// as the Rust implementation). The function returns the accumulated payload
-// without the delimiter.
-func (c *Connection) SendMessage(jsonStr string) ([]byte, error) {
-	err := c.char.WriteValue([]byte(jsonStr), map[string]interface{}{"type": "reliable"})
+// SendMessageAndGetResponse writes a JSON string to the GATT characteristic and waits for a
+// framed response. The function returns the accumulated payload without the framing bytes.
+func (c *Connection) SendMessageAndGetResponse(jsonStr []byte) ([]byte, error) {
+	err := c.char.WriteValue(jsonStr, map[string]interface{}{"type": "reliable"})
 	if err != nil {
 		return nil, fmt.Errorf("GATT write failed: %w", err)
 	}
 
-	// Read response chunks delimited by 0x02, with 60 s timeout.
+	// Read response chunks
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	var buffer []byte
+	var fr frameReader
 	for {
 		select {
 		case prop := <-c.propCh:
 			if prop == nil || prop.Name != "Value" {
 				continue
 			}
+
 			chunk, ok := prop.Value.([]byte)
 			if !ok {
-				continue
+				return nil, fmt.Errorf("unexpected GATT property value type: %T", prop.Value)
 			}
-			if len(chunk) == 1 && chunk[0] == 0x02 {
-				if len(buffer) == 0 {
-					return nil, fmt.Errorf("empty response received from device")
-				}
-				return buffer, nil
+
+			payload, err := fr.feed(chunk)
+			if err != nil {
+				return nil, err
 			}
-			buffer = append(buffer, chunk...)
+			if payload != nil {
+				return payload, nil
+			}
 		case <-ctx.Done():
 			return nil, fmt.Errorf("timed out waiting for response from device")
 		}
@@ -181,7 +178,8 @@ func (c *Connection) Disconnect() {
 		for range c.propCh {
 		}
 	}()
-	c.cancelWatch()
+
+	c.char.UnwatchProperties(c.propCh)
 
 	if c.char != nil {
 		if err := c.char.StopNotify(); err != nil {
