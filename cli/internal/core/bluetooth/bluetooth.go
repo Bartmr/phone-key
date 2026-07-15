@@ -136,37 +136,38 @@ func Connect(deviceAddress string) (*Connection, error) {
 }
 
 // SendMessage writes a JSON string to the GATT characteristic and waits for a
-// framed response. The response is delimited by a single 0x02 byte (same protocol
-// as the Rust implementation). The function returns the accumulated payload
-// without the delimiter.
+// framed response. The response is framed by a 0x01 start byte and a 0x02 end
+// byte. The function returns the accumulated payload without the framing bytes.
 func (c *Connection) SendMessage(jsonStr []byte) ([]byte, error) {
 	err := c.char.WriteValue(jsonStr, map[string]interface{}{"type": "reliable"})
 	if err != nil {
 		return nil, fmt.Errorf("GATT write failed: %w", err)
 	}
 
-	// Read response chunks delimited by 0x02, with 60 s timeout.
+	// Read response chunks framed by 0x01 (start) and 0x02 (end), with 60 s timeout.
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	var buffer []byte
+	var fr frameReader
 	for {
 		select {
 		case prop := <-c.propCh:
 			if prop == nil || prop.Name != "Value" {
 				continue
 			}
+
 			chunk, ok := prop.Value.([]byte)
 			if !ok {
 				continue
 			}
-			if len(chunk) == 1 && chunk[0] == 0x02 {
-				if len(buffer) == 0 {
-					return nil, fmt.Errorf("empty response received from device")
-				}
-				return buffer, nil
+
+			payload, err := fr.feed(chunk)
+			if err != nil {
+				return nil, err
 			}
-			buffer = append(buffer, chunk...)
+			if payload != nil {
+				return payload, nil
+			}
 		case <-ctx.Done():
 			return nil, fmt.Errorf("timed out waiting for response from device")
 		}

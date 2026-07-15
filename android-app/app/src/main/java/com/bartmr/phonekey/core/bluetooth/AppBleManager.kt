@@ -22,6 +22,9 @@ class AppBleManager(context: Context) : BleManager(context) {
   fun sendToClient(data: ByteArray) {
     val ch = this.serverCharacteristic ?: throw IllegalStateException("Not connected")
 
+    sendNotification(ch, byteArrayOf(0x01))
+      .enqueue()
+
     sendNotification(ch, data)
       .split()
       .enqueue()

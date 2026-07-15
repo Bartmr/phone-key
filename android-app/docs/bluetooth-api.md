@@ -22,15 +22,16 @@ The connection requires Bluetooth pairing with MITM protection — both devices 
 ### Data flow
 
 - **Computer → Phone**: Write to the characteristic (GATT Write).
-- **Phone → Computer**: Send a notification (GATT Notify) with the response payload, followed by a second notification containing the single byte `0x02` as a terminator.
+- **Phone → Computer**: The response is framed by three notifications: a `0x01` start byte, the response payload, and a `0x02` end byte. The payload may be split across multiple notifications if it exceeds the MTU.
 
 ```
  Client (computer)                      Server (phone)
         |                                      |
         |--- GATT Write (JSON command) ------->|
         |                                      |  process command
+        |<-- GATT Notify (0x01 start) ---------|
         |<-- GATT Notify (response payload) ---|
-        |<-- GATT Notify (0x02 terminator) ----|
+        |<-- GATT Notify (0x02 end) -----------|
         |                                      |
 ```
 
@@ -113,6 +114,7 @@ interface ListKeysResponse {
 
 ```
 Client → Phone:  {"type":"list-keys"}
+Phone → Client:  0x01
 Phone → Client:  {"type":"list-keys-response","keys":[{"alias":"my-key","algorithm":"EC","keySize":256,...}]}
 Phone → Client:  0x02
 ```
@@ -169,6 +171,7 @@ interface SignResponse {
 ```
 Client → Phone:  {"type":"sign","keyAlias":"my-key","data":"AAAAIGZsNThuNnJm...","algorithm":"SHA256withECDSA"}
                  (phone shows biometric prompt; user authenticates)
+Phone → Client:  0x01
 Phone → Client:  {"type":"sign-response","signature":"MEUCIQDfn0jA..."}
 Phone → Client:  0x02
 ```
@@ -203,6 +206,7 @@ interface EchoResponse {
 
 ```
 Client → Phone:  {"type":"echo","data":"ping"}
+Phone → Client:  0x01
 Phone → Client:  {"type":"echo-response","data":"ping"}
 Phone → Client:  0x02
 ```
