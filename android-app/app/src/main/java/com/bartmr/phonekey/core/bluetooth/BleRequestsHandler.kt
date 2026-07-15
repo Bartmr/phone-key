@@ -51,21 +51,33 @@ sealed class ClientMessage {
 
 @Serializable
 sealed class ServerMessage {
+    // --- list-keys ---
+
     @Serializable
     @SerialName("list-keys-result")
     data class ListKeysResult(val keys: List<KeyEntryResult>) : ServerMessage()
+
+    // --- sign ---
 
     @Serializable
     @SerialName("sign-result")
     data class SignResult(val signature: String) : ServerMessage()
 
+    // --- echo ---
+
     @Serializable
     @SerialName("echo-result")
     data class EchoResult(val data: String) : ServerMessage()
 
+    // --- Protocol-level errors (can happen at any time) ---
+
     @Serializable
-    @SerialName("error")
-    data class Error(val message: String) : ServerMessage()
+    @SerialName("unknown")
+    object UnknownError : ServerMessage()
+
+    @Serializable
+    @SerialName("busy")
+    object BusyError : ServerMessage()
 }
 
 @Serializable
@@ -176,7 +188,7 @@ fun rememberBleRequestsHandler(
             }
 
             if (commandState != null && !currentCommand.compareAndSet(null, commandState)) {
-                val busy = json.encodeToString(ServerMessage.Error.serializer(), ServerMessage.Error("Busy. The app can only deal with one request at a time."))
+                val busy = json.encodeToString(ServerMessage.serializer(), ServerMessage.BusyError)
                 bleServer.sendToClient(device, busy.toByteArray(Charsets.UTF_8))
                 return@handler
             }
@@ -236,8 +248,8 @@ fun rememberBleRequestsHandler(
                             is KeystoreSignResult.Error -> {
                                 Log.e(TAG, "Sign failed: code=${result.code}, message=${result.message}")
                                 json.encodeToString(
-                                    ServerMessage.Error.serializer(),
-                                    ServerMessage.Error(result.message),
+                                    ServerMessage.UnknownError.serializer(),
+                                    ServerMessage.UnknownError,
                                 )
                             }
                         }

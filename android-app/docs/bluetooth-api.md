@@ -211,16 +211,24 @@ Phone → Client:  {"type":"echo-result","data":"ping"}
 Phone → Client:  0x02
 ```
 
-## Error responses (Server → Client)
+## Protocol-level errors (Server → Client)
 
-All error responses follow this schema:
+These can happen at any time — they are not specific to a particular command.
 
 ```ts
-interface Error {
-  type: "error";
-  message: string;
+interface UnknownError {
+  type: "unknown";
+}
+
+interface BusyError {
+  type: "busy";
 }
 ```
+
+- **`unknown`** — an unexpected internal error occurred.
+- **`busy`** — the server is already processing a request and cannot accept another one concurrently.
+
+Command-specific errors (like `sign-error`) are documented together with their respective commands above.
 
 ---
 
