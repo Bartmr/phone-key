@@ -16,7 +16,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 
-	"phone-key-cli/internal/core/bluetooth"
+	"phone-key-cli/internal/bluetooth"
 )
 
 // listKeysResult is the JSON wrapper for a list-keys result.
