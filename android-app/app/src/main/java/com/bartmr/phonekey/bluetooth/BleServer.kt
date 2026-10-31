@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.core.bluetooth
+package com.bartmr.phonekey.bluetooth
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter

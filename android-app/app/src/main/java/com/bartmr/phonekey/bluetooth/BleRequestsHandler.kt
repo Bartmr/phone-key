@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.core.bluetooth
+package com.bartmr.phonekey.bluetooth
 
 import android.Manifest
 import android.os.Build
@@ -17,9 +17,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
-import com.bartmr.phonekey.core.keystore.KeyStoreRepository
-import com.bartmr.phonekey.core.keystore.KeystoreSigner
-import com.bartmr.phonekey.core.keystore.SignResult as KeystoreSignResult
+import com.bartmr.phonekey.keystore.KeyStoreRepository
+import com.bartmr.phonekey.keystore.KeystoreSigner
+import com.bartmr.phonekey.keystore.SignResult as KeystoreSignResult
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

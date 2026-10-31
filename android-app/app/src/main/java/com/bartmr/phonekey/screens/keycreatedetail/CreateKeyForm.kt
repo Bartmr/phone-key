@@ -31,13 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.bartmr.phonekey.core.keystore.KeyInfo
-import com.bartmr.phonekey.core.keystore.KeyStoreRepository
-import com.bartmr.phonekey.core.keystore.BLOCK_MODE_DISPLAY_NAMES
-import com.bartmr.phonekey.core.keystore.DIGEST_DISPLAY_NAMES
-import com.bartmr.phonekey.core.keystore.ENCRYPTION_PADDING_DISPLAY_NAMES
-import com.bartmr.phonekey.core.keystore.PURPOSE_DISPLAY_NAMES
-import com.bartmr.phonekey.core.keystore.SIGNATURE_PADDING_DISPLAY_NAMES
+import com.bartmr.phonekey.keystore.KeyInfo
+import com.bartmr.phonekey.keystore.KeyStoreRepository
+import com.bartmr.phonekey.keystore.BLOCK_MODE_DISPLAY_NAMES
+import com.bartmr.phonekey.keystore.DIGEST_DISPLAY_NAMES
+import com.bartmr.phonekey.keystore.ENCRYPTION_PADDING_DISPLAY_NAMES
+import com.bartmr.phonekey.keystore.PURPOSE_DISPLAY_NAMES
+import com.bartmr.phonekey.keystore.SIGNATURE_PADDING_DISPLAY_NAMES
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

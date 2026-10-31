@@ -40,9 +40,9 @@ import androidx.compose.ui.Modifier
 import android.net.Uri
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bartmr.phonekey.core.keystore.KeyInfo
-import com.bartmr.phonekey.core.keystore.KeyStoreRepository
-import com.bartmr.phonekey.core.keystore.purposesToDisplayNames
+import com.bartmr.phonekey.keystore.KeyInfo
+import com.bartmr.phonekey.keystore.KeyStoreRepository
+import com.bartmr.phonekey.keystore.purposesToDisplayNames
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

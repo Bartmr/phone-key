@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.core.keystore
+package com.bartmr.phonekey.keystore
 
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt

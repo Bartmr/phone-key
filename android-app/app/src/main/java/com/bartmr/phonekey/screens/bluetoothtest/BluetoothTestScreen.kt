@@ -16,7 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.bartmr.phonekey.core.bluetooth.BleServer
+import com.bartmr.phonekey.bluetooth.BleServer
 
 
 @Composable
