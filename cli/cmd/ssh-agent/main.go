@@ -1,7 +1,7 @@
 package main
 
 import (
-	ssh_agent "phone-key-cli/internal/commands/ssh-agent"
+	ssh_agent "phone-key-cli/internal/cmd/ssh-agent"
 )
 
 func main() {
