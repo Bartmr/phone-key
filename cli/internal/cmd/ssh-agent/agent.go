@@ -15,8 +15,6 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
-
-	"phone-key-cli/internal/bluetooth"
 )
 
 // listKeysResult is the JSON wrapper for a list-keys result.
@@ -67,12 +65,10 @@ func peekType(data []byte) (string, error) {
 }
 
 // PhoneKeyAgent implements the golang.org/x/crypto/ssh/agent.Agent interface
-// by proxying requests to the phone over Bluetooth.
+// by proxying requests to the phone over the local network.
 type PhoneKeyAgent struct {
-	deviceAddress string
-	mu            sync.Mutex
-	conn          *bluetooth.Connection
-	identities    []identityEntry
+	mu         sync.Mutex
+	identities []identityEntry
 }
 
 type identityEntry struct {
@@ -81,47 +77,14 @@ type identityEntry struct {
 	algorithm string // Java Signature algorithm string (e.g. "SHA256withECDSA")
 }
 
-// NewAgent creates a PhoneKeyAgent configured for the given device address.
-func NewAgent(deviceAddress string) *PhoneKeyAgent {
-	return &PhoneKeyAgent{deviceAddress: deviceAddress}
+// NewAgent creates a PhoneKeyAgent configured for the given address.
+func NewAgent() *PhoneKeyAgent {
+	return &PhoneKeyAgent{}
 }
 
-// getConn lazily initializes and returns the Bluetooth connection.
-// If the connection is broken, it is discarded and recreated on the next call.
-func (a *PhoneKeyAgent) getConn() (*bluetooth.Connection, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	if a.conn != nil {
-		return a.conn, nil
-	}
-
-	conn, err := bluetooth.Connect(a.deviceAddress)
-	if err != nil {
-		return nil, err
-	}
-	a.conn = conn
-	return a.conn, nil
-}
-
-// sendMessage sends a JSON message over Bluetooth and returns the raw response.
-// On error, the cached connection is discarded so the next call creates a fresh one.
-func (a *PhoneKeyAgent) sendMessage(jsonStr string) ([]byte, error) {
-	conn, err := a.getConn()
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := conn.SendMessageAndGetResponse([]byte(jsonStr))
-	if err != nil {
-		// Discard broken connection so the next call creates a fresh one.
-		a.mu.Lock()
-		a.conn = nil
-		a.mu.Unlock()
-		fmt.Fprintf(os.Stderr, "[ssh-agent] Bluetooth connection error: %v\n", err)
-		return nil, err
-	}
-	return response, nil
+// sendMessage sends a JSON message over the local network and returns the response.
+func (a *PhoneKeyAgent) sendMessage(_ string) ([]byte, error) {
+	return nil, fmt.Errorf("Not implemented")
 }
 
 // List sends the list-keys command to the phone and returns the

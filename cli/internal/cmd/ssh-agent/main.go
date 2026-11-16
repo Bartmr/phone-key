@@ -13,18 +13,13 @@ import (
 const socketPath = "/tmp/phone-key-ssh-agent.sock"
 
 func Main() {
-	cfg, err := config.Load()
+	_, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
 		os.Exit(1)
 	}
 
-	if cfg.DeviceAddress == "" {
-		fmt.Fprintln(os.Stderr, `"deviceAddress" not set in ~/.phone-key.json`)
-		os.Exit(1)
-	}
-
-	phoneKeyAgent := NewAgent(cfg.DeviceAddress)
+	phoneKeyAgent := NewAgent()
 
 	// Remove stale socket file if it exists.
 	_ = os.Remove(socketPath)

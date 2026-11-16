@@ -11,7 +11,6 @@ kotlin = "2.2.10"
 kotlinxSerializationJson = "1.8.0"
 composeBom = "2026.02.01"
 biometric = "1.1.0"
-nordicBle = "2.11.0"
 navigationCompose = "2.8.5"
 
 [libraries]
@@ -32,7 +31,6 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
-nordic-ble = { group = "no.nordicsemi.android", name = "ble", version.ref = "nordicBle" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 

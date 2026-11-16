@@ -8,7 +8,6 @@ import (
 )
 
 type Config struct {
-	DeviceAddress string `json:"deviceAddress"`
 }
 
 func Load() (*Config, error) {
