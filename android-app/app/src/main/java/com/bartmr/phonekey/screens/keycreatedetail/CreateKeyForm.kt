@@ -1,5 +1,7 @@
 package com.bartmr.phonekey.screens.keycreatedetail
 
+import android.app.KeyguardManager
+import android.content.Context
 import android.security.keystore.KeyProperties
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +24,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,8 +32,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import com.bartmr.phonekey.keystore.KeyInfo
 import com.bartmr.phonekey.keystore.KeyStoreRepository
 import com.bartmr.phonekey.keystore.BLOCK_MODE_DISPLAY_NAMES
@@ -45,6 +52,22 @@ fun CreateKeyForm(
     repository: KeyStoreRepository,
     onKeyCreated: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val keyguardManager = remember {
+        context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+    }
+    var hasSecureLockScreen by remember { mutableStateOf(keyguardManager.isDeviceSecure) }
+    val lifecycleOwner = context as? LifecycleOwner
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasSecureLockScreen = keyguardManager.isDeviceSecure
+            }
+        }
+        lifecycleOwner?.lifecycle?.addObserver(observer)
+        onDispose { lifecycleOwner?.lifecycle?.removeObserver(observer) }
+    }
+
     var alias by remember { mutableStateOf("") }
     var selectedAlgorithm by remember { mutableStateOf(KeyProperties.KEY_ALGORITHM_EC) }
     var selectedKeySize by remember { mutableStateOf(256) }
@@ -53,7 +76,7 @@ fun CreateKeyForm(
     var selectedEncryptionPaddings by remember { mutableStateOf(emptyList<String>()) }
     var selectedSignaturePaddings by remember { mutableStateOf(emptyList<String>()) }
     var selectedBlockModes by remember { mutableStateOf(emptyList<String>()) }
-    var userAuthRequired by remember { mutableStateOf(true) }
+    var userAuthRequired by remember(hasSecureLockScreen) { mutableStateOf(hasSecureLockScreen) }
     var authValiditySeconds by remember { mutableStateOf("0") }
     val authValidityError by remember {
         derivedStateOf {
@@ -300,7 +323,20 @@ fun CreateKeyForm(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("Require authentication", modifier = Modifier.weight(1f))
-        Switch(checked = userAuthRequired, onCheckedChange = { userAuthRequired = it })
+        Switch(
+            checked = userAuthRequired,
+            onCheckedChange = { userAuthRequired = it },
+            enabled = hasSecureLockScreen,
+        )
+    }
+
+    if (!hasSecureLockScreen) {
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Set up a secure lock screen (PIN, pattern, or password) to require authentication.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 
     if (userAuthRequired) {
