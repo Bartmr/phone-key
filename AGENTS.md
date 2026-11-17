@@ -1,6 +1,6 @@
 # Phone Key
 
-Use your phone as an hardware security module.
+An app that turns your phone into a portable hardware-backed key store.
 
 ## Android app (`cd ./android-app`)
 

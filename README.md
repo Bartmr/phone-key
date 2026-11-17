@@ -1,6 +1,6 @@
 # Phone Key
 
-Use your phone as an hardware security module.
+An app that turns your phone into a portable hardware-backed key store, similar to a YubiKey or Apple's Secure Enclave.
 
 > [!TIP]
 > Curious about my AI coding setup? Reach out to me on [Linkedin](https://www.linkedin.com/in/bartmr/)
