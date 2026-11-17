@@ -6,6 +6,7 @@ import androidx.fragment.app.FragmentActivity
 import com.bartmr.phonekey.keystore.KeyStoreRepository
 import com.bartmr.phonekey.keystore.KeystoreSigner
 import com.bartmr.phonekey.keystore.SignResult
+import com.bartmr.phonekey.settings.AppSettings
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.ApplicationCall
@@ -28,17 +29,57 @@ import kotlinx.serialization.json.Json
 class PhoneKeyServer(
     private val activity: FragmentActivity,
     private val repository: KeyStoreRepository,
+    private val settings: AppSettings,
     private val signer: KeystoreSigner = KeystoreSigner(),
 ) {
     private val commandMutex = Mutex()
     private var engine: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
+    private var runningPort: Int? = null
 
     fun start() {
         if (engine != null) return
 
-        val server = embeddedServer(
+        val port = settings.serverPort
+        val server = createServer(port)
+        server.start(wait = false)
+        engine = server
+        runningPort = port
+
+        Log.i(TAG, "Listening on http://$HOST:$port")
+    }
+
+    fun stop() {
+        val running = engine ?: return
+        engine = null
+        runningPort = null
+        running.stop(gracePeriodMillis = 0, timeoutMillis = 1_000)
+        Log.i(TAG, "Stopped")
+    }
+
+    fun restart(): Boolean {
+        val port = settings.serverPort
+        if (engine != null && port == runningPort) return true
+
+        if (engine != null) {
+            Log.i(TAG, "Restarting server on port $port")
+            stop()
+        }
+
+        return try {
+            start()
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start server on port $port", e)
+            false
+        }
+    }
+
+    private fun createServer(
+        port: Int,
+    ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> =
+        embeddedServer(
             CIO,
-            port = PORT,
+            port = port,
             host = HOST,
         ) {
             install(ContentNegotiation) {
@@ -49,18 +90,6 @@ class PhoneKeyServer(
                 post("/sign") { handleSign(call) }
             }
         }
-        server.start(wait = false)
-        engine = server
-
-        Log.i(TAG, "Listening on http://$HOST:$PORT")
-    }
-
-    fun stop() {
-        val running = engine ?: return
-        engine = null
-        running.stop(gracePeriodMillis = 0, timeoutMillis = 1_000)
-        Log.i(TAG, "Stopped")
-    }
 
     private suspend fun handleListKeys(call: ApplicationCall) {
         if (!commandMutex.tryLock()) {
@@ -167,6 +196,5 @@ class PhoneKeyServer(
     companion object {
         private const val TAG = "PhoneKeyServer"
         private const val HOST = "127.0.0.1"
-        private const val PORT = 8765
     }
 }

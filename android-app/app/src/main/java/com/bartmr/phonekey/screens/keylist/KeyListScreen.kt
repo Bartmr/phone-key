@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,7 +64,14 @@ fun KeyListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Phone Key") })
+            TopAppBar(
+                title = { Text("Phone Key") },
+                actions = {
+                    IconButton(onClick = { navController.navigate("settings") }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                },
+            )
         },
         floatingActionButton = {
             FloatingActionButton(

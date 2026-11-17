@@ -43,9 +43,6 @@ type keyEntryResult struct {
 // Android KeyProperties.PURPOSE_SIGN = 4
 const purposeSign = 4
 
-// phoneServerURL is the local endpoint exposed by `adb forward`.
-const phoneServerURL = "http://127.0.0.1:8765"
-
 // signResult is the JSON result for a successful sign command.
 type signResult struct {
 	Signature string `json:"signature"`
@@ -56,6 +53,7 @@ type signResult struct {
 type PhoneKeyAgent struct {
 	mu         sync.Mutex
 	identities []identityEntry
+	serverURL  string
 }
 
 type identityEntry struct {
@@ -64,9 +62,11 @@ type identityEntry struct {
 	algorithm string // Java Signature algorithm string (e.g. "SHA256withECDSA")
 }
 
-// NewAgent creates a PhoneKeyAgent configured for the given address.
-func NewAgent() *PhoneKeyAgent {
-	return &PhoneKeyAgent{}
+// NewAgent creates a PhoneKeyAgent configured for the given local port.
+func NewAgent(port int) *PhoneKeyAgent {
+	return &PhoneKeyAgent{
+		serverURL: fmt.Sprintf("http://127.0.0.1:%d", port),
+	}
 }
 
 // request sends a JSON payload to the given phone endpoint and returns the
@@ -82,7 +82,7 @@ func (a *PhoneKeyAgent) request(path string, method string, payload any) (int, [
 		body = bytes.NewReader(data)
 	}
 
-	req, err := http.NewRequest(method, phoneServerURL+path, body)
+	req, err := http.NewRequest(method, a.serverURL+path, body)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create request: %w", err)
 	}

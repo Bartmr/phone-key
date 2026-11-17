@@ -13,24 +13,32 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bartmr.phonekey.keystore.KeyStoreRepository
 import com.bartmr.phonekey.server.PhoneKeyServer
+import com.bartmr.phonekey.settings.AppSettings
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
 import com.bartmr.phonekey.screens.keylist.KeyListScreen
 import com.bartmr.phonekey.screens.keycreatedetail.KeyCreateDetailScreen
+import com.bartmr.phonekey.screens.settings.SettingsScreen
 
 class MainActivity : AppCompatActivity() {
     private lateinit var repository: KeyStoreRepository
+    private lateinit var settings: AppSettings
     private lateinit var httpServer: PhoneKeyServer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         repository = KeyStoreRepository(this)
-        httpServer = PhoneKeyServer(this, repository)
+        settings = AppSettings(this)
+        httpServer = PhoneKeyServer(this, repository, settings)
 
         enableEdgeToEdge()
         setContent {
             PhoneKeyTheme {
-                AppNavHost(repository)
+                AppNavHost(
+                    repository = repository,
+                    settings = settings,
+                    onPortChanged = { httpServer.restart() },
+                )
             }
         }
     }
@@ -55,7 +63,11 @@ class MainActivity : AppCompatActivity() {
 }
 
 @Composable
-fun AppNavHost(repository: KeyStoreRepository) {
+fun AppNavHost(
+    repository: KeyStoreRepository,
+    settings: AppSettings,
+    onPortChanged: () -> Boolean,
+) {
     val navController = rememberNavController()
 
     NavHost(
@@ -83,6 +95,13 @@ fun AppNavHost(repository: KeyStoreRepository) {
                 repository = repository,
                 navController = navController,
                 alias = alias,
+            )
+        }
+        composable("settings") {
+            SettingsScreen(
+                settings = settings,
+                navController = navController,
+                onPortChanged = onPortChanged,
             )
         }
     }
