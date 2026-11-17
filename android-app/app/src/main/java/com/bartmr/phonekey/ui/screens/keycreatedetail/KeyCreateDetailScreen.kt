@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.screens.keycreatedetail
+package com.bartmr.phonekey.ui.screens.keycreatedetail
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column

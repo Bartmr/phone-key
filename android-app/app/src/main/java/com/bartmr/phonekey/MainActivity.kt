@@ -15,9 +15,9 @@ import com.bartmr.phonekey.keystore.KeyStoreRepository
 import com.bartmr.phonekey.server.PhoneKeyServer
 import com.bartmr.phonekey.settings.AppSettings
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
-import com.bartmr.phonekey.screens.keylist.KeyListScreen
-import com.bartmr.phonekey.screens.keycreatedetail.KeyCreateDetailScreen
-import com.bartmr.phonekey.screens.settings.SettingsScreen
+import com.bartmr.phonekey.ui.screens.keylist.KeyListScreen
+import com.bartmr.phonekey.ui.screens.keycreatedetail.KeyCreateDetailScreen
+import com.bartmr.phonekey.ui.screens.settings.SettingsScreen
 
 class MainActivity : AppCompatActivity() {
     private lateinit var repository: KeyStoreRepository

@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.screens.keycreatedetail
+package com.bartmr.phonekey.ui.screens.keycreatedetail
 
 import android.app.KeyguardManager
 import android.content.Context

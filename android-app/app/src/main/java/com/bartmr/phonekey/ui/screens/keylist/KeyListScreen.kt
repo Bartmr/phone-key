@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.screens.keylist
+package com.bartmr.phonekey.ui.screens.keylist
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
