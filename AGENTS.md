@@ -1,6 +1,6 @@
 # Phone Key
 
-Use your phone as an hardware key / secure enclave.
+Use your phone as an hardware security module.
 
 ## Android app (`cd ./android`)
 
