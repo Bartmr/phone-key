@@ -5,6 +5,8 @@ Requirements this addresses ([index.md](./index.md)):
 - discoverable by client
 - secured / encrypted traffic
 - easy for developers to implement their own clients
+- should work on protected / guest wifi
+- should handle when the phone's IP changes in the network, or the network itself changes
 
 ## Decision
 
