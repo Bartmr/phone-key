@@ -1,33 +1,42 @@
 package ssh_agent
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
 	"os/exec"
 	"strings"
 
-	"phone-key-cli/internal/config"
-
 	sshagent "golang.org/x/crypto/ssh/agent"
 )
 
-const socketPath = "/tmp/phone-key-ssh-agent.sock"
+const (
+	socketPath = "/tmp/phone-key-ssh-agent.sock"
+
+	// DefaultPort is the phone server port used when none is provided.
+	DefaultPort = 8765
+
+	// MinPort and MaxPort bound the allowed phone server port.
+	MinPort = 1024
+	MaxPort = 65535
+)
 
 func Main() {
-	cfg, err := config.Load()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+	port := flag.Int("port", DefaultPort, "phone server port")
+	flag.Parse()
+
+	if *port < MinPort || *port > MaxPort {
+		fmt.Fprintf(os.Stderr, "Invalid port %d: must be between %d and %d\n", *port, MinPort, MaxPort)
 		os.Exit(1)
 	}
 
-	if err := ensureAdbForward(cfg.Port); err != nil {
+	if err := ensureAdbForward(*port); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to set up adb forward: %v\n", err)
 		os.Exit(1)
 	}
 
-	port := cfg.Port
-	phoneKeyAgent := NewAgent(port)
+	phoneKeyAgent := NewAgent(*port)
 
 	// Remove stale socket file if it exists.
 	_ = os.Remove(socketPath)
@@ -39,7 +48,7 @@ func Main() {
 	}
 
 	fmt.Fprintf(os.Stderr, "SSH agent listening on %s\n", socketPath)
-	fmt.Fprintf(os.Stderr, "Phone server port: %d\n", port)
+	fmt.Fprintf(os.Stderr, "Phone server port: %d\n", *port)
 	fmt.Fprintf(os.Stderr, "export SSH_AUTH_SOCK=%s\n", socketPath)
 
 	for {
