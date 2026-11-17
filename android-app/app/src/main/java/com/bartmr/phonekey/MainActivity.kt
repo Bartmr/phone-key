@@ -1,40 +1,62 @@
 package com.bartmr.phonekey
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bartmr.phonekey.keystore.KeyStoreRepository
+import com.bartmr.phonekey.server.PhoneKeyServer
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
 import com.bartmr.phonekey.screens.keylist.KeyListScreen
 import com.bartmr.phonekey.screens.keycreatedetail.KeyCreateDetailScreen
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var repository: KeyStoreRepository
+    private lateinit var httpServer: PhoneKeyServer
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        repository = KeyStoreRepository(this)
+        httpServer = PhoneKeyServer(this, repository)
 
         enableEdgeToEdge()
         setContent {
             PhoneKeyTheme {
-                AppNavHost()
+                AppNavHost(repository)
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        try {
+            httpServer.start()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to start HTTP server", e)
+        }
+    }
+
+    override fun onStop() {
+        try {
+            httpServer.stop()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to stop HTTP server", e)
+        }
+        super.onStop()
     }
 }
 
 @Composable
-fun AppNavHost() {
-    val context = LocalContext.current
+fun AppNavHost(repository: KeyStoreRepository) {
     val navController = rememberNavController()
-    val repository = remember { KeyStoreRepository(context) }
 
     NavHost(
         navController = navController,

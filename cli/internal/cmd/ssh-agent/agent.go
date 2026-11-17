@@ -8,10 +8,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -19,7 +22,6 @@ import (
 
 // listKeysResult is the JSON wrapper for a list-keys result.
 type listKeysResult struct {
-	Type string           `json:"type"`
 	Keys []keyEntryResult `json:"keys"`
 }
 
@@ -41,27 +43,12 @@ type keyEntryResult struct {
 // Android KeyProperties.PURPOSE_SIGN = 4
 const purposeSign = 4
 
+// phoneServerURL is the local endpoint exposed by `adb forward`.
+const phoneServerURL = "http://127.0.0.1:8765"
+
 // signResult is the JSON result for a successful sign command.
 type signResult struct {
-	Type      string `json:"type"`
 	Signature string `json:"signature"`
-}
-
-// echoResult is the JSON response for a successful echo command.
-type echoResult struct {
-	Type string `json:"type"`
-	Data string `json:"data"`
-}
-
-// peekType extracts the "type" field from a JSON response.
-func peekType(data []byte) (string, error) {
-	var peek struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &peek); err != nil {
-		return "", err
-	}
-	return peek.Type, nil
 }
 
 // PhoneKeyAgent implements the golang.org/x/crypto/ssh/agent.Agent interface
@@ -82,40 +69,65 @@ func NewAgent() *PhoneKeyAgent {
 	return &PhoneKeyAgent{}
 }
 
-// sends a JSON message over the local network and returns the response.
-func (a *PhoneKeyAgent) request(_ string) ([]byte, error) {
-	return nil, fmt.Errorf("Not implemented")
+// request sends a JSON payload to the given phone endpoint and returns the
+// response status code and body. Callers are responsible for checking the
+// status code.
+func (a *PhoneKeyAgent) request(path string, method string, payload any) (int, []byte, error) {
+	var body io.Reader
+	if payload != nil {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return 0, nil, fmt.Errorf("failed to marshal request: %w", err)
+		}
+		body = bytes.NewReader(data)
+	}
+
+	req, err := http.NewRequest(method, phoneServerURL+path, body)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	if payload != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	client := &http.Client{Timeout: 2 * time.Minute}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("request to phone failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	return resp.StatusCode, responseBody, nil
 }
 
 // List sends the list-keys command to the phone and returns the
 // parsed key list.
 func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
-	response, err := a.request(`{"type":"list-keys"}`)
+	status, responseBody, err := a.request("/list-keys", http.MethodPost, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list keys: %w", err)
 	}
+	if status < http.StatusOK || status >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf(
+			"phone returned HTTP %d: %s",
+			status,
+			strings.TrimSpace(string(responseBody)),
+		)
+	}
 
-	fmt.Fprintf(os.Stderr, "[ssh-agent] raw list-keys response: %s\n", string(response))
+	fmt.Fprintf(os.Stderr, "[ssh-agent] raw list-keys response: %s\n", string(responseBody))
 
-	msgType, err := peekType(response)
-	if err != nil {
+	var parsed listKeysResult
+	if err := json.Unmarshal(responseBody, &parsed); err != nil {
 		return nil, fmt.Errorf("failed to decode list-keys response: %w", err)
 	}
 
-	switch msgType {
-	case "list-keys-result":
-		var parsed listKeysResult
-		if err := json.Unmarshal(response, &parsed); err != nil {
-			return nil, fmt.Errorf("failed to decode list-keys response: %w", err)
-		}
-		return a.keysFromEntries(parsed.Keys)
-	case "unknown-error":
-		return nil, fmt.Errorf("list-keys failed on device: unknown error")
-	case "busy-error":
-		return nil, fmt.Errorf("list-keys failed: device is busy with another command")
-	default:
-		return nil, fmt.Errorf("unexpected response type %q: %s", msgType, string(response))
-	}
+	return a.keysFromEntries(parsed.Keys)
 }
 
 // keysFromEntries converts key entry responses from the phone into SSH agent keys,
@@ -275,40 +287,28 @@ func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, er
 
 	dataB64 := base64.StdEncoding.EncodeToString(data)
 
-	requestJSON, err := json.Marshal(map[string]string{
-		"type":      "sign",
+	status, responseBody, err := a.request("/sign", http.MethodPost, map[string]string{
 		"keyAlias":  alias,
 		"data":      dataB64,
 		"algorithm": algorithm,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal sign request: %w", err)
-	}
-
-	response, err := a.request(string(requestJSON))
-	if err != nil {
 		return nil, fmt.Errorf("sign request failed: %w", err)
 	}
+	if status < http.StatusOK || status >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf(
+			"phone returned HTTP %d: %s",
+			status,
+			strings.TrimSpace(string(responseBody)),
+		)
+	}
 
-	msgType, err := peekType(response)
-	if err != nil {
+	var signResp signResult
+	if err := json.Unmarshal(responseBody, &signResp); err != nil {
 		return nil, fmt.Errorf("failed to decode sign response: %w", err)
 	}
 
-	switch msgType {
-	case "sign-result":
-		var signResp signResult
-		if err := json.Unmarshal(response, &signResp); err != nil {
-			return nil, fmt.Errorf("failed to decode sign response: %w", err)
-		}
-		return a.buildSignature(key, signResp.Signature)
-	case "unknown-error":
-		return nil, fmt.Errorf("signing failed on device: unknown error")
-	case "busy-error":
-		return nil, fmt.Errorf("signing failed: device is busy with another command")
-	default:
-		return nil, fmt.Errorf("unexpected response type %q: %s", msgType, string(response))
-	}
+	return a.buildSignature(key, signResp.Signature)
 }
 
 // buildSignature decodes a base64-encoded signature from the phone and converts
