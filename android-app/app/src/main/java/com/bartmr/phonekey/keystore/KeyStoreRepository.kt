@@ -20,6 +20,12 @@ class KeyStoreRepository(context: Context) {
     fun keyExists(alias: String): Boolean =
         keyStore.containsAlias(alias)
 
+    fun getPrivateKeyEntry(alias: String): KeyStore.PrivateKeyEntry? =
+        keyStore.getEntry(alias, null) as? KeyStore.PrivateKeyEntry
+
+    fun getPublicKeyDer(alias: String): ByteArray? =
+        getPrivateKeyEntry(alias)?.certificate?.publicKey?.encoded
+
     fun getKeyInfo(alias: String): KeyInfo {
         val entry = keyStore.getEntry(alias, null)
             ?: throw IllegalArgumentException("Key '$alias' not found in Android Keystore")
