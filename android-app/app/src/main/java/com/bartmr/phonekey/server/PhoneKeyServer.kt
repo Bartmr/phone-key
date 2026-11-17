@@ -144,10 +144,6 @@ class PhoneKeyServer(
 
         try {
             val request = call.receive<SignRequest>()
-            if (request.algorithm.isBlank()) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad-request"))
-                return
-            }
 
             val entry = withContext(Dispatchers.IO) {
                 repository.getPrivateKeyEntry(request.keyAlias)
@@ -161,10 +157,11 @@ class PhoneKeyServer(
             val keyInfo = withContext(Dispatchers.IO) {
                 repository.getKeyInfo(request.keyAlias)
             }
+            val algorithm = KeystoreSigner.deriveAlgorithm(keyInfo)
             val data = Base64.decode(request.data, Base64.DEFAULT)
 
             val result = withContext(Dispatchers.Main) {
-                signer.sign(entry.privateKey, data, request.algorithm, keyInfo, activity)
+                signer.sign(entry.privateKey, data, algorithm, keyInfo, activity)
             }
 
             when (result) {

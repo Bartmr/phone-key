@@ -57,9 +57,8 @@ type PhoneKeyAgent struct {
 }
 
 type identityEntry struct {
-	key       ssh.PublicKey
-	alias     string
-	algorithm string // Java Signature algorithm string (e.g. "SHA256withECDSA")
+	key   ssh.PublicKey
+	alias string
 }
 
 // NewAgent creates a PhoneKeyAgent configured for the given local port.
@@ -183,8 +182,6 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, e
 			)
 		}
 
-		algorithm := deriveAlgorithm(pk.Type(), item.Digests)
-
 		fmt.Fprintln(os.Stderr, ssh.MarshalAuthorizedKey(pk))
 
 		keys = append(keys, &agent.Key{
@@ -193,7 +190,7 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, e
 			Comment: item.Alias,
 		})
 
-		entries = append(entries, identityEntry{key: pk, alias: item.Alias, algorithm: algorithm})
+		entries = append(entries, identityEntry{key: pk, alias: item.Alias})
 	}
 
 	a.mu.Lock()
@@ -206,25 +203,6 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, e
 	)
 
 	return keys, nil
-}
-
-// deriveAlgorithm returns the Java Signature algorithm string for the given
-// SSH key type and configured digests.
-func deriveAlgorithm(keyType string, digests []string) string {
-	digest := "SHA256"
-	if len(digests) > 0 {
-		digest = digests[0]
-	}
-	digestSuffix := strings.ReplaceAll(digest, "-", "")
-
-	switch keyType {
-	case ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521:
-		return digestSuffix + "withECDSA"
-	case ssh.KeyAlgoRSA:
-		return digestSuffix + "withRSA"
-	default:
-		return digestSuffix + "withECDSA"
-	}
 }
 
 // toMPInt converts raw big-endian bytes to SSH mpint encoding.
@@ -271,11 +249,9 @@ type ecdsaSig struct {
 func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error) {
 	a.mu.Lock()
 	var alias string
-	var algorithm string
 	for _, entry := range a.identities {
 		if string(entry.key.Marshal()) == string(key.Marshal()) {
 			alias = entry.alias
-			algorithm = entry.algorithm
 			break
 		}
 	}
@@ -288,9 +264,8 @@ func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, er
 	dataB64 := base64.StdEncoding.EncodeToString(data)
 
 	status, responseBody, err := a.request("/sign", http.MethodPost, map[string]string{
-		"keyAlias":  alias,
-		"data":      dataB64,
-		"algorithm": algorithm,
+		"keyAlias": alias,
+		"data":     dataB64,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("sign request failed: %w", err)

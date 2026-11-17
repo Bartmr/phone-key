@@ -26,7 +26,6 @@ data class KeyEntryResponse(
 data class SignRequest(
     val keyAlias: String,
     val data: String,
-    val algorithm: String,
 )
 
 @Serializable

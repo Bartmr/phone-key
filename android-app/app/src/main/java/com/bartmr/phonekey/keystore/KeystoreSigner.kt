@@ -1,5 +1,6 @@
 package com.bartmr.phonekey.keystore
 
+import android.security.keystore.KeyProperties
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -102,12 +103,13 @@ class KeystoreSigner {
 
     companion object {
         fun deriveAlgorithm(keyInfo: KeyInfo): String {
-            val digest = keyInfo.digests.firstOrNull()
-                ?: throw IllegalStateException(
-                    "Key '${keyInfo.alias}' has no digests configured"
-                )
+            val digest = keyInfo.digests.firstOrNull() ?: KeyProperties.DIGEST_SHA256
             val digestSuffix = digest.replace("-", "")
-            return "${digestSuffix}with${keyInfo.algorithm}"
+            val keyAlgorithm = when (keyInfo.algorithm) {
+                KeyProperties.KEY_ALGORITHM_EC -> "ECDSA"
+                else -> keyInfo.algorithm
+            }
+            return "${digestSuffix}with$keyAlgorithm"
         }
     }
 }
