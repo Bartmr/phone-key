@@ -82,15 +82,15 @@ func NewAgent() *PhoneKeyAgent {
 	return &PhoneKeyAgent{}
 }
 
-// sendMessage sends a JSON message over the local network and returns the response.
-func (a *PhoneKeyAgent) sendMessage(_ string) ([]byte, error) {
+// sends a JSON message over the local network and returns the response.
+func (a *PhoneKeyAgent) request(_ string) ([]byte, error) {
 	return nil, fmt.Errorf("Not implemented")
 }
 
 // List sends the list-keys command to the phone and returns the
 // parsed key list.
 func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
-	response, err := a.sendMessage(`{"type":"list-keys"}`)
+	response, err := a.request(`{"type":"list-keys"}`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list keys: %w", err)
 	}
@@ -285,7 +285,7 @@ func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, er
 		return nil, fmt.Errorf("failed to marshal sign request: %w", err)
 	}
 
-	response, err := a.sendMessage(string(requestJSON))
+	response, err := a.request(string(requestJSON))
 	if err != nil {
 		return nil, fmt.Errorf("sign request failed: %w", err)
 	}
