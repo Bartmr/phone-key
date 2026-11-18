@@ -68,8 +68,8 @@ interface KeyEntry {
   /** Stable UUID of the key, used with `/sign`. */
   id: string;
 
-  /** Keystore alias, as shown in the app. */
-  alias: string;
+  /** Display name of the key, as shown in the app. */
+  name: string;
 
   /** JCA key algorithm reported by Android Keystore, e.g. `EC`, `RSA`, `AES`, `HmacSHA256`. */
   algorithm: string;

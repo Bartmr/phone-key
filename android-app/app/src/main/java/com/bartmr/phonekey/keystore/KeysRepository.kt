@@ -16,11 +16,8 @@ class KeysRepository(context: Context) {
     fun getAllStoredKeys(): List<StoredKey> =
         keysMetadata.all.keys.map { getStoredKey(it) }
 
-    fun keyExists(alias: String): Boolean =
-        getAllStoredKeys().any { it.alias == alias }
-
     fun getPrivateKeyEntry(id: String): KeyStore.PrivateKeyEntry? =
-        keyStore.getEntry(getStoredKey(id).alias, null) as? KeyStore.PrivateKeyEntry
+        keyStore.getEntry(id, null) as? KeyStore.PrivateKeyEntry
 
     fun getPublicKeyDer(id: String): ByteArray? =
         getPrivateKeyEntry(id)?.certificate?.publicKey?.encoded
@@ -32,28 +29,28 @@ class KeysRepository(context: Context) {
     }
 
     fun deleteKey(id: String) {
-        val alias = getStoredKey(id).alias
-        keyStore.deleteEntry(alias)
+        keyStore.deleteEntry(id)
         keysMetadata.edit().remove(id).apply()
     }
 
     fun generateKey(newKeySpec: NewKeySpec) {
+        val id = UUID.randomUUID().toString()
         val isSymmetric = newKeySpec.algorithm == KeyProperties.KEY_ALGORITHM_AES ||
                 newKeySpec.algorithm == KeyProperties.KEY_ALGORITHM_HMAC_SHA256
 
         if (isSymmetric) {
             val keyGenerator = KeyGenerator.getInstance(newKeySpec.algorithm, "AndroidKeyStore")
-            keyGenerator.init(newKeySpec.toAlgorithmParameterSpec())
+            keyGenerator.init(newKeySpec.toAlgorithmParameterSpec(id))
             keyGenerator.generateKey()
         } else {
             val keyPairGenerator = KeyPairGenerator.getInstance(newKeySpec.algorithm, "AndroidKeyStore")
-            keyPairGenerator.initialize(newKeySpec.toAlgorithmParameterSpec())
+            keyPairGenerator.initialize(newKeySpec.toAlgorithmParameterSpec(id))
             keyPairGenerator.generateKeyPair()
         }
 
         val storedKey = StoredKey(
-            id = UUID.randomUUID().toString(),
-            alias = newKeySpec.alias,
+            id = id,
+            name = newKeySpec.name,
             algorithm = newKeySpec.algorithm,
             keySize = newKeySpec.keySize,
             purposes = newKeySpec.purposes,

@@ -6,7 +6,7 @@ import android.security.keystore.KeyProperties
 import java.security.spec.AlgorithmParameterSpec
 
 data class NewKeySpec(
-    val alias: String,
+    val name: String,
     val algorithm: String,
     val keySize: Int,
     val purposes: Int,
@@ -19,7 +19,7 @@ data class NewKeySpec(
 )
 
 @Suppress("WrongConstant", "DEPRECATION")
-fun NewKeySpec.toAlgorithmParameterSpec(): AlgorithmParameterSpec {
+fun NewKeySpec.toAlgorithmParameterSpec(alias: String): AlgorithmParameterSpec {
     val builder = KeyGenParameterSpec.Builder(alias, purposes)
         .setKeySize(keySize)
 

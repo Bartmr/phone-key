@@ -10,7 +10,7 @@ data class ListKeysResponse(
 @Serializable
 data class KeyEntryResponse(
     val id: String,
-    val alias: String,
+    val name: String,
     val algorithm: String,
     val keySize: Int,
     val purposes: Int,

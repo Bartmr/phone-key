@@ -119,7 +119,7 @@ fun CreateKeyForm(
         onDispose { lifecycleOwner?.lifecycle?.removeObserver(observer) }
     }
 
-    var alias by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
     var selectedAlgorithm by remember { mutableStateOf(KeyProperties.KEY_ALGORITHM_EC) }
     var selectedKeySize by remember { mutableStateOf(256) }
     var selectedPurposes by remember { mutableStateOf(KeyProperties.PURPOSE_SIGN) }
@@ -139,12 +139,11 @@ fun CreateKeyForm(
             }
         }
     }
-    val aliasError by remember {
+    val nameError by remember {
         derivedStateOf {
-            val trimmed = alias.trim()
+            val trimmed = name.trim()
             when {
-                trimmed.isEmpty() -> "Alias must not be empty"
-                repository.keyExists(trimmed) -> "Alias already exists"
+                trimmed.isEmpty() -> "Name must not be empty"
                 else -> null
             }
         }
@@ -223,11 +222,11 @@ fun CreateKeyForm(
     Spacer(Modifier.height(16.dp))
 
     OutlinedTextField(
-        value = alias,
-        onValueChange = { alias = it },
-        label = { Text("Alias") },
-        isError = aliasError != null,
-        supportingText = aliasError?.let { { Text(it) } },
+        value = name,
+        onValueChange = { name = it },
+        label = { Text("Name") },
+        isError = nameError != null,
+        supportingText = nameError?.let { { Text(it) } },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -407,10 +406,10 @@ fun CreateKeyForm(
     Spacer(Modifier.height(24.dp))
 
     Button(
-        enabled = aliasError == null && authValidityError == null && selectedPurposes != 0,
+        enabled = nameError == null && authValidityError == null && selectedPurposes != 0,
         onClick = {
             val newKeySpec = NewKeySpec(
-                alias = alias.trim(),
+                name = name.trim(),
                 algorithm = selectedAlgorithm,
                 keySize = selectedKeySize,
                 purposes = selectedPurposes,

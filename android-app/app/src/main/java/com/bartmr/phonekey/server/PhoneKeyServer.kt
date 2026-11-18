@@ -104,7 +104,7 @@ class PhoneKeyServer(
                     try {
                         KeyEntryResponse(
                             id = storedKey.id,
-                            alias = storedKey.alias,
+                            name = storedKey.name,
                             algorithm = storedKey.algorithm,
                             keySize = storedKey.keySize,
                             purposes = storedKey.purposes,
@@ -121,7 +121,7 @@ class PhoneKeyServer(
                         )
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        Log.e(TAG, "Failed to read key '${storedKey.alias}'", e)
+                        Log.e(TAG, "Failed to read key '${storedKey.name}'", e)
                         null
                     }
                 }

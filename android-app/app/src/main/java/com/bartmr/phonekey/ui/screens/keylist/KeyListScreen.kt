@@ -126,7 +126,7 @@ fun KeyListScreen(
         AlertDialog(
             onDismissRequest = { deleteConfirmKey = null },
             title = { Text("Delete key") },
-            text = { Text("Permanently delete \"${key.alias}\" from the Android Keystore?") },
+            text = { Text("Permanently delete \"${key.name}\" from the Android Keystore?") },
             confirmButton = {
                 TextButton(onClick = {
                     repository.deleteKey(key.id)
@@ -167,7 +167,7 @@ private fun KeyListItem(
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    storedKey.alias,
+                    storedKey.name,
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
@@ -184,7 +184,7 @@ private fun KeyListItem(
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete ${storedKey.alias}",
+                    contentDescription = "Delete ${storedKey.name}",
                     tint = MaterialTheme.colorScheme.error,
                 )
             }

@@ -28,7 +28,7 @@ type listKeysResult struct {
 // keyEntryResult matches the JSON the phone sends for each key.
 type keyEntryResult struct {
 	ID                                 string   `json:"id"`
-	Alias                              string   `json:"alias"`
+	Name                               string   `json:"name"`
 	Algorithm                          string   `json:"algorithm"`
 	KeySize                            int      `json:"keySize"`
 	Purposes                           int      `json:"purposes"`
@@ -58,9 +58,9 @@ type PhoneKeyAgent struct {
 }
 
 type identityEntry struct {
-	key   ssh.PublicKey
-	id    string
-	alias string
+	key  ssh.PublicKey
+	id   string
+	name string
 }
 
 // NewAgent creates a PhoneKeyAgent configured for the given local port.
@@ -146,7 +146,7 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, e
 		if item.PublicKeyBase64 == nil {
 			fmt.Fprintf(os.Stderr,
 				"[ssh-agent] List(): skipping '%s' — no public key (symmetric key: %s)\n",
-				item.Alias, item.Algorithm,
+				item.Name, item.Algorithm,
 			)
 			continue
 		}
@@ -155,7 +155,7 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, e
 		if item.Purposes&purposeSign == 0 {
 			fmt.Fprintf(os.Stderr,
 				"[ssh-agent] List(): skipping '%s' — missing SIGN purpose (purposes=%d)\n",
-				item.Alias, item.Purposes,
+				item.Name, item.Purposes,
 			)
 			continue
 		}
@@ -164,7 +164,7 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, e
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to base64-decode public key for '%s': %w",
-				item.Alias, err,
+				item.Name, err,
 			)
 		}
 
@@ -172,7 +172,7 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, e
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to parse public key for '%s': %w",
-				item.Alias, err,
+				item.Name, err,
 			)
 		}
 
@@ -180,7 +180,7 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, e
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to parse public key for '%s': %w",
-				item.Alias, err,
+				item.Name, err,
 			)
 		}
 
@@ -189,10 +189,10 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, e
 		keys = append(keys, &agent.Key{
 			Format:  pk.Type(),
 			Blob:    pk.Marshal(),
-			Comment: item.Alias,
+			Comment: item.Name,
 		})
 
-		entries = append(entries, identityEntry{key: pk, id: item.ID, alias: item.Alias})
+		entries = append(entries, identityEntry{key: pk, id: item.ID, name: item.Name})
 	}
 
 	a.mu.Lock()

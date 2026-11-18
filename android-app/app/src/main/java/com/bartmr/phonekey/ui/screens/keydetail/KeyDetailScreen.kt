@@ -60,7 +60,7 @@ fun KeyDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(storedKey?.alias ?: "") },
+                title = { Text(storedKey?.name ?: "") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -100,7 +100,7 @@ fun KeyDetailScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete key") },
-            text = { Text("Permanently delete \"${storedKey?.alias}\" from the Android Keystore?") },
+            text = { Text("Permanently delete \"${storedKey?.name}\" from the Android Keystore?") },
             confirmButton = {
                 TextButton(onClick = {
                     repository.deleteKey(id)
@@ -124,7 +124,7 @@ private fun KeyDetailView(storedKey: StoredKey) {
     Spacer(Modifier.height(16.dp))
 
     DetailRow("ID", storedKey.id)
-    DetailRow("Alias", storedKey.alias)
+    DetailRow("Name", storedKey.name)
     DetailRow("Algorithm", storedKey.algorithm)
     DetailRow("Key size", "${storedKey.keySize} bits")
     DetailRow("Purposes", storedKey.purposes.purposesToDisplayNames().joinToString(", "))
