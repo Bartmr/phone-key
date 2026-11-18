@@ -54,7 +54,7 @@ import androidx.navigation.NavController
 import com.bartmr.phonekey.keystore.BLOCK_MODE_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.DIGEST_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.ENCRYPTION_PADDING_DISPLAY_NAMES
-import com.bartmr.phonekey.keystore.CreateKeySpec
+import com.bartmr.phonekey.keystore.NewKeySpec
 import com.bartmr.phonekey.keystore.KeysRepository
 import com.bartmr.phonekey.keystore.PURPOSE_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.SIGNATURE_PADDING_DISPLAY_NAMES
@@ -409,7 +409,7 @@ fun CreateKeyForm(
     Button(
         enabled = aliasError == null && authValidityError == null && selectedPurposes != 0,
         onClick = {
-            val spec = CreateKeySpec(
+            val newKeySpec = NewKeySpec(
                 alias = alias.trim(),
                 algorithm = selectedAlgorithm,
                 keySize = selectedKeySize,
@@ -422,7 +422,7 @@ fun CreateKeyForm(
                 userAuthenticationValidityDurationSeconds = authValiditySeconds.toIntOrNull() ?: 0,
             )
 
-            repository.generateKey(spec)
+            repository.generateKey(newKeySpec)
             onKeyCreated()
         },
         modifier = Modifier.fillMaxWidth(),

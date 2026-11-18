@@ -35,31 +35,31 @@ class KeysRepository(context: Context) {
         keysMetadata.edit().remove(alias).apply()
     }
 
-    fun generateKey(spec: CreateKeySpec) {
-        val isSymmetric = spec.algorithm == KeyProperties.KEY_ALGORITHM_AES ||
-                spec.algorithm == KeyProperties.KEY_ALGORITHM_HMAC_SHA256
+    fun generateKey(newKeySpec: NewKeySpec) {
+        val isSymmetric = newKeySpec.algorithm == KeyProperties.KEY_ALGORITHM_AES ||
+                newKeySpec.algorithm == KeyProperties.KEY_ALGORITHM_HMAC_SHA256
 
         if (isSymmetric) {
-            val keyGenerator = KeyGenerator.getInstance(spec.algorithm, "AndroidKeyStore")
-            keyGenerator.init(spec.toAlgorithmParameterSpec())
+            val keyGenerator = KeyGenerator.getInstance(newKeySpec.algorithm, "AndroidKeyStore")
+            keyGenerator.init(newKeySpec.toAlgorithmParameterSpec())
             keyGenerator.generateKey()
         } else {
-            val keyPairGenerator = KeyPairGenerator.getInstance(spec.algorithm, "AndroidKeyStore")
-            keyPairGenerator.initialize(spec.toAlgorithmParameterSpec())
+            val keyPairGenerator = KeyPairGenerator.getInstance(newKeySpec.algorithm, "AndroidKeyStore")
+            keyPairGenerator.initialize(newKeySpec.toAlgorithmParameterSpec())
             keyPairGenerator.generateKeyPair()
         }
 
         val storedKey = StoredKey(
-            alias = spec.alias,
-            algorithm = spec.algorithm,
-            keySize = spec.keySize,
-            purposes = spec.purposes,
-            digests = spec.digests,
-            encryptionPaddings = spec.encryptionPaddings,
-            signaturePaddings = spec.signaturePaddings,
-            blockModes = spec.blockModes,
-            userAuthenticationRequired = spec.userAuthenticationRequired,
-            userAuthenticationValidityDurationSeconds = spec.userAuthenticationValidityDurationSeconds,
+            alias = newKeySpec.alias,
+            algorithm = newKeySpec.algorithm,
+            keySize = newKeySpec.keySize,
+            purposes = newKeySpec.purposes,
+            digests = newKeySpec.digests,
+            encryptionPaddings = newKeySpec.encryptionPaddings,
+            signaturePaddings = newKeySpec.signaturePaddings,
+            blockModes = newKeySpec.blockModes,
+            userAuthenticationRequired = newKeySpec.userAuthenticationRequired,
+            userAuthenticationValidityDurationSeconds = newKeySpec.userAuthenticationValidityDurationSeconds,
         )
         keysMetadata.edit().putString(storedKey.alias, json.encodeToString(StoredKey.serializer(), storedKey)).apply()
     }
