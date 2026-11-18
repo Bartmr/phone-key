@@ -11,7 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.bartmr.phonekey.keystore.KeyStoreRepository
+import com.bartmr.phonekey.keystore.KeysRepository
 import com.bartmr.phonekey.server.PhoneKeyServer
 import com.bartmr.phonekey.settings.AppSettings
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
@@ -21,14 +21,14 @@ import com.bartmr.phonekey.ui.screens.keydetail.KeyDetailScreen
 import com.bartmr.phonekey.ui.screens.settings.SettingsScreen
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var repository: KeyStoreRepository
+    private lateinit var repository: KeysRepository
     private lateinit var settings: AppSettings
     private lateinit var httpServer: PhoneKeyServer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        repository = KeyStoreRepository(this)
+        repository = KeysRepository(this)
         settings = AppSettings(this)
         httpServer = PhoneKeyServer(this, repository, settings)
 
@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity() {
 
 @Composable
 fun AppNavHost(
-    repository: KeyStoreRepository,
+    repository: KeysRepository,
     settings: AppSettings,
     onPortChanged: () -> Boolean,
 ) {

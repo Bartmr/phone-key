@@ -55,14 +55,14 @@ import com.bartmr.phonekey.keystore.BLOCK_MODE_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.DIGEST_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.ENCRYPTION_PADDING_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.CreateKeySpec
-import com.bartmr.phonekey.keystore.KeyStoreRepository
+import com.bartmr.phonekey.keystore.KeysRepository
 import com.bartmr.phonekey.keystore.PURPOSE_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.SIGNATURE_PADDING_DISPLAY_NAMES
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KeyCreateScreen(
-    repository: KeyStoreRepository,
+    repository: KeysRepository,
     navController: NavController,
 ) {
     val context = LocalContext.current
@@ -100,7 +100,7 @@ fun KeyCreateScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateKeyForm(
-    repository: KeyStoreRepository,
+    repository: KeysRepository,
     onKeyCreated: () -> Unit,
 ) {
     val context = LocalContext.current

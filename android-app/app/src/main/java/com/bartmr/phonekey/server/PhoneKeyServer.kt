@@ -3,7 +3,7 @@ package com.bartmr.phonekey.server
 import android.util.Base64
 import android.util.Log
 import androidx.fragment.app.FragmentActivity
-import com.bartmr.phonekey.keystore.KeyStoreRepository
+import com.bartmr.phonekey.keystore.KeysRepository
 import com.bartmr.phonekey.keystore.KeystoreSigner
 import com.bartmr.phonekey.keystore.SignResult
 import com.bartmr.phonekey.settings.AppSettings
@@ -29,7 +29,7 @@ import kotlinx.serialization.json.Json
 
 class PhoneKeyServer(
     private val activity: FragmentActivity,
-    private val repository: KeyStoreRepository,
+    private val repository: KeysRepository,
     private val settings: AppSettings,
     private val signer: KeystoreSigner = KeystoreSigner(),
 ) {

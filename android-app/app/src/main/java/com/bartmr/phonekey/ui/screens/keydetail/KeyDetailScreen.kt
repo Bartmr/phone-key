@@ -35,7 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.bartmr.phonekey.keystore.KeyInfo
-import com.bartmr.phonekey.keystore.KeyStoreRepository
+import com.bartmr.phonekey.keystore.KeysRepository
 import com.bartmr.phonekey.keystore.purposesToDisplayNames
 import com.bartmr.phonekey.keystore.toDisplayNames
 import com.bartmr.phonekey.keystore.BLOCK_MODE_DISPLAY_NAMES
@@ -46,7 +46,7 @@ import com.bartmr.phonekey.keystore.SIGNATURE_PADDING_DISPLAY_NAMES
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KeyDetailScreen(
-    repository: KeyStoreRepository,
+    repository: KeysRepository,
     navController: NavController,
     alias: String,
 ) {

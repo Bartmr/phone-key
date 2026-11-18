@@ -42,13 +42,13 @@ import android.net.Uri
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.bartmr.phonekey.keystore.KeyInfo
-import com.bartmr.phonekey.keystore.KeyStoreRepository
+import com.bartmr.phonekey.keystore.KeysRepository
 import com.bartmr.phonekey.keystore.purposesToDisplayNames
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KeyListScreen(
-    repository: KeyStoreRepository,
+    repository: KeysRepository,
     navController: NavController,
 ) {
     val keys = remember { mutableStateListOf<KeyInfo>() }
