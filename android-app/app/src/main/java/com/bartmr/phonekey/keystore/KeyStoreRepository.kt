@@ -11,7 +11,7 @@ import kotlinx.serialization.json.Json
 
 class KeyStoreRepository(context: Context) {
     private val keyStore: KeyStore = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val keysMetadata = context.getSharedPreferences("keys", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
 
     fun listAliases(): List<String> =
@@ -79,7 +79,7 @@ class KeyStoreRepository(context: Context) {
 
     fun deleteKey(alias: String) {
         keyStore.deleteEntry(alias)
-        prefs.edit().remove(metaKey(alias)).apply()
+        keysMetadata.edit().remove(alias).apply()
     }
 
     fun generateKey(info: KeyInfo) {
@@ -96,17 +96,12 @@ class KeyStoreRepository(context: Context) {
             keyPairGenerator.generateKeyPair()
         }
 
-        prefs.edit().putString(metaKey(info.alias), json.encodeToString(KeyInfo.serializer(), info)).apply()
+        keysMetadata.edit().putString(info.alias, json.encodeToString(KeyInfo.serializer(), info)).apply()
     }
 
     private fun loadMeta(alias: String): KeyInfo? {
-        val raw = prefs.getString(metaKey(alias), null) ?: return null
+        val raw = keysMetadata.getString(alias, null) ?: return null
         return json.decodeFromString(KeyInfo.serializer(), raw)
     }
 
-    private fun metaKey(alias: String) = "key_meta_$alias"
-
-    companion object {
-        private const val PREFS_NAME = "phonekey_key_metadata"
-    }
 }
