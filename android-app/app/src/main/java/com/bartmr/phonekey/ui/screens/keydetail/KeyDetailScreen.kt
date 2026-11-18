@@ -34,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bartmr.phonekey.keystore.KeyInfo
+import com.bartmr.phonekey.keystore.StoredKey
 import com.bartmr.phonekey.keystore.KeysRepository
 import com.bartmr.phonekey.keystore.purposesToDisplayNames
 import com.bartmr.phonekey.keystore.toDisplayNames
@@ -50,11 +50,11 @@ fun KeyDetailScreen(
     navController: NavController,
     alias: String,
 ) {
-    var keyInfo by remember { mutableStateOf<KeyInfo?>(null) }
+    var storedKey by remember { mutableStateOf<StoredKey?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(alias) {
-        keyInfo = repository.getKeyInfo(alias)
+        storedKey = repository.getStoredKey(alias)
     }
 
     Scaffold(
@@ -76,8 +76,8 @@ fun KeyDetailScreen(
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            keyInfo?.let { info ->
-                KeyDetailView(info = info)
+            storedKey?.let { key ->
+                KeyDetailView(storedKey = key)
                 Spacer(Modifier.height(24.dp))
                 Button(
                     onClick = { showDeleteDialog = true },
@@ -120,36 +120,36 @@ fun KeyDetailScreen(
 }
 
 @Composable
-private fun KeyDetailView(info: KeyInfo) {
+private fun KeyDetailView(storedKey: StoredKey) {
     Spacer(Modifier.height(16.dp))
 
-    DetailRow("Alias", info.alias)
-    DetailRow("Algorithm", info.algorithm)
-    DetailRow("Key size", "${info.keySize} bits")
-    DetailRow("Purposes", info.purposes.purposesToDisplayNames().joinToString(", "))
+    DetailRow("Alias", storedKey.alias)
+    DetailRow("Algorithm", storedKey.algorithm)
+    DetailRow("Key size", "${storedKey.keySize} bits")
+    DetailRow("Purposes", storedKey.purposes.purposesToDisplayNames().joinToString(", "))
 
-    if (info.digests.isNotEmpty()) {
-        DetailRow("Digests", info.digests.toDisplayNames(DIGEST_DISPLAY_NAMES).joinToString(", "))
+    if (storedKey.digests.isNotEmpty()) {
+        DetailRow("Digests", storedKey.digests.toDisplayNames(DIGEST_DISPLAY_NAMES).joinToString(", "))
     }
-    if (info.encryptionPaddings.isNotEmpty()) {
+    if (storedKey.encryptionPaddings.isNotEmpty()) {
         DetailRow(
             "Encryption paddings",
-            info.encryptionPaddings.toDisplayNames(ENCRYPTION_PADDING_DISPLAY_NAMES).joinToString(", "),
+            storedKey.encryptionPaddings.toDisplayNames(ENCRYPTION_PADDING_DISPLAY_NAMES).joinToString(", "),
         )
     }
-    if (info.signaturePaddings.isNotEmpty()) {
+    if (storedKey.signaturePaddings.isNotEmpty()) {
         DetailRow(
             "Signature paddings",
-            info.signaturePaddings.toDisplayNames(SIGNATURE_PADDING_DISPLAY_NAMES).joinToString(", "),
+            storedKey.signaturePaddings.toDisplayNames(SIGNATURE_PADDING_DISPLAY_NAMES).joinToString(", "),
         )
     }
-    if (info.blockModes.isNotEmpty()) {
-        DetailRow("Block modes", info.blockModes.toDisplayNames(BLOCK_MODE_DISPLAY_NAMES).joinToString(", "))
+    if (storedKey.blockModes.isNotEmpty()) {
+        DetailRow("Block modes", storedKey.blockModes.toDisplayNames(BLOCK_MODE_DISPLAY_NAMES).joinToString(", "))
     }
 
-    DetailRow("User auth required", if (info.userAuthenticationRequired) "Yes" else "No")
-    if (info.userAuthenticationRequired) {
-        val timeout = info.userAuthenticationValidityDurationSeconds
+    DetailRow("User auth required", if (storedKey.userAuthenticationRequired) "Yes" else "No")
+    if (storedKey.userAuthenticationRequired) {
+        val timeout = storedKey.userAuthenticationValidityDurationSeconds
         val timeoutDisplay = if (timeout == 0) "Every use" else "${timeout}s"
         DetailRow("Auth timeout", timeoutDisplay)
     }

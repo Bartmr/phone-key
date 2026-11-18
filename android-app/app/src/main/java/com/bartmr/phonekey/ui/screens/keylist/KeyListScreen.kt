@@ -41,7 +41,7 @@ import androidx.compose.ui.Modifier
 import android.net.Uri
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bartmr.phonekey.keystore.KeyInfo
+import com.bartmr.phonekey.keystore.StoredKey
 import com.bartmr.phonekey.keystore.KeysRepository
 import com.bartmr.phonekey.keystore.purposesToDisplayNames
 
@@ -51,15 +51,15 @@ fun KeyListScreen(
     repository: KeysRepository,
     navController: NavController,
 ) {
-    val keys = remember { mutableStateListOf<KeyInfo>() }
+    val storedKeys = remember { mutableStateListOf<StoredKey>() }
     var deleteConfirmAlias by remember { mutableStateOf<String?>(null) }
 
-    fun refreshKeys() {
-        keys.clear()
-        keys.addAll(repository.getAllKeyInfos())
+    fun refreshStoredKeys() {
+        storedKeys.clear()
+        storedKeys.addAll(repository.getAllStoredKeys())
     }
 
-    LaunchedEffect(Unit) { refreshKeys() }
+    LaunchedEffect(Unit) { refreshStoredKeys() }
 
     Scaffold(
         topBar = {
@@ -80,7 +80,7 @@ fun KeyListScreen(
             }
         },
     ) { paddingValues ->
-        if (keys.isEmpty()) {
+        if (storedKeys.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -109,13 +109,13 @@ fun KeyListScreen(
                     .padding(paddingValues),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(keys.toList()) { keyInfo ->
+                items(storedKeys.toList()) { storedKey ->
                     KeyListItem(
-                        keyInfo = keyInfo,
+                        storedKey = storedKey,
                         onClick = {
-                            navController.navigate("key_detail?alias=${Uri.encode(keyInfo.alias)}")
+                            navController.navigate("key_detail?alias=${Uri.encode(storedKey.alias)}")
                         },
-                        onDelete = { deleteConfirmAlias = keyInfo.alias },
+                        onDelete = { deleteConfirmAlias = storedKey.alias },
                     )
                 }
             }
@@ -131,7 +131,7 @@ fun KeyListScreen(
                 TextButton(onClick = {
                     repository.deleteKey(deleteConfirmAlias!!)
                     deleteConfirmAlias = null
-                    refreshKeys()
+                    refreshStoredKeys()
                 }) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
@@ -147,7 +147,7 @@ fun KeyListScreen(
 
 @Composable
 private fun KeyListItem(
-    keyInfo: KeyInfo,
+    storedKey: StoredKey,
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -163,20 +163,20 @@ private fun KeyListItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Default.Lock, contentDescription = keyInfo.algorithm)
+            Icon(Icons.Default.Lock, contentDescription = storedKey.algorithm)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    keyInfo.alias,
+                    storedKey.alias,
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
-                    "${keyInfo.algorithm} — ${keyInfo.keySize} bits",
+                    "${storedKey.algorithm} — ${storedKey.keySize} bits",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    keyInfo.purposes.purposesToDisplayNames().joinToString(", "),
+                    storedKey.purposes.purposesToDisplayNames().joinToString(", "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -184,7 +184,7 @@ private fun KeyListItem(
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Delete ${keyInfo.alias}",
+                    contentDescription = "Delete ${storedKey.alias}",
                     tint = MaterialTheme.colorScheme.error,
                 )
             }

@@ -12,8 +12,8 @@ class KeysRepository(context: Context) {
     private val keysMetadata = context.getSharedPreferences("keys", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun getAllKeyInfos(): List<KeyInfo> =
-        keysMetadata.all.keys.map { getKeyInfo(it) }
+    fun getAllStoredKeys(): List<StoredKey> =
+        keysMetadata.all.keys.map { getStoredKey(it) }
 
     fun keyExists(alias: String): Boolean =
         keysMetadata.contains(alias)
@@ -24,10 +24,10 @@ class KeysRepository(context: Context) {
     fun getPublicKeyDer(alias: String): ByteArray? =
         getPrivateKeyEntry(alias)?.certificate?.publicKey?.encoded
 
-    fun getKeyInfo(alias: String): KeyInfo {
+    fun getStoredKey(alias: String): StoredKey {
         val raw = keysMetadata.getString(alias, null)
             ?: throw IllegalArgumentException("Key '$alias' not found")
-        return json.decodeFromString(KeyInfo.serializer(), raw)
+        return json.decodeFromString(StoredKey.serializer(), raw)
     }
 
     fun deleteKey(alias: String) {
@@ -49,7 +49,7 @@ class KeysRepository(context: Context) {
             keyPairGenerator.generateKeyPair()
         }
 
-        val info = KeyInfo(
+        val storedKey = StoredKey(
             alias = spec.alias,
             algorithm = spec.algorithm,
             keySize = spec.keySize,
@@ -61,7 +61,7 @@ class KeysRepository(context: Context) {
             userAuthenticationRequired = spec.userAuthenticationRequired,
             userAuthenticationValidityDurationSeconds = spec.userAuthenticationValidityDurationSeconds,
         )
-        keysMetadata.edit().putString(info.alias, json.encodeToString(KeyInfo.serializer(), info)).apply()
+        keysMetadata.edit().putString(storedKey.alias, json.encodeToString(StoredKey.serializer(), storedKey)).apply()
     }
 
 }

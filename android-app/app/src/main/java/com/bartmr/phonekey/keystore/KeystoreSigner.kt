@@ -40,10 +40,10 @@ class KeystoreSigner {
         privateKey: PrivateKey,
         data: ByteArray,
         algorithm: String,
-        keyInfo: KeyInfo,
+        storedKey: StoredKey,
         activity: FragmentActivity,
     ): SignResult {
-        if (!keyInfo.userAuthenticationRequired) {
+        if (!storedKey.userAuthenticationRequired) {
             val signature = Signature.getInstance(algorithm)
             signature.initSign(privateKey)
             signature.update(data)
@@ -102,12 +102,12 @@ class KeystoreSigner {
     }
 
     companion object {
-        fun deriveAlgorithm(keyInfo: KeyInfo): String {
-            val digest = keyInfo.digests.firstOrNull() ?: KeyProperties.DIGEST_SHA256
+        fun deriveAlgorithm(storedKey: StoredKey): String {
+            val digest = storedKey.digests.firstOrNull() ?: KeyProperties.DIGEST_SHA256
             val digestSuffix = digest.replace("-", "")
-            val keyAlgorithm = when (keyInfo.algorithm) {
+            val keyAlgorithm = when (storedKey.algorithm) {
                 KeyProperties.KEY_ALGORITHM_EC -> "ECDSA"
-                else -> keyInfo.algorithm
+                else -> storedKey.algorithm
             }
             return "${digestSuffix}with$keyAlgorithm"
         }

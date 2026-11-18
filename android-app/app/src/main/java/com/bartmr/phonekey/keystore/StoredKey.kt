@@ -3,7 +3,7 @@ package com.bartmr.phonekey.keystore
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class KeyInfo(
+data class StoredKey(
     val alias: String,
     val algorithm: String,
     val keySize: Int,
