@@ -55,9 +55,8 @@ fun KeyListScreen(
     var deleteConfirmAlias by remember { mutableStateOf<String?>(null) }
 
     fun refreshKeys() {
-        val aliases = repository.listAliases()
         keys.clear()
-        keys.addAll(aliases.map { repository.getKeyInfo(it) })
+        keys.addAll(repository.getAllKeyInfos())
     }
 
     LaunchedEffect(Unit) { refreshKeys() }

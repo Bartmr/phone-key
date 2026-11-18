@@ -12,8 +12,8 @@ class KeysRepository(context: Context) {
     private val keysMetadata = context.getSharedPreferences("keys", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun listAliases(): List<String> =
-        keysMetadata.all.keys.toList()
+    fun getAllKeyInfos(): List<KeyInfo> =
+        keysMetadata.all.keys.map { getKeyInfo(it) }
 
     fun keyExists(alias: String): Boolean =
         keysMetadata.contains(alias)

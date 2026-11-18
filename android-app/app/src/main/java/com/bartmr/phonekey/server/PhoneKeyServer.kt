@@ -100,9 +100,8 @@ class PhoneKeyServer(
 
         try {
             val keys = withContext(Dispatchers.IO) {
-                repository.listAliases().mapNotNull { alias ->
+                repository.getAllKeyInfos().mapNotNull { info ->
                     try {
-                        val info = repository.getKeyInfo(alias)
                         KeyEntryResponse(
                             alias = info.alias,
                             algorithm = info.algorithm,
@@ -115,13 +114,13 @@ class PhoneKeyServer(
                             userAuthenticationRequired = info.userAuthenticationRequired,
                             userAuthenticationValidityDurationSeconds =
                                 info.userAuthenticationValidityDurationSeconds,
-                            publicKeyBase64 = repository.getPublicKeyDer(alias)?.let {
+                            publicKeyBase64 = repository.getPublicKeyDer(info.alias)?.let {
                                 Base64.encodeToString(it, Base64.NO_WRAP)
                             },
                         )
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        Log.e(TAG, "Failed to read key '$alias'", e)
+                        Log.e(TAG, "Failed to read key '${info.alias}'", e)
                         null
                     }
                 }
