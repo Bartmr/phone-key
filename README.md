@@ -5,5 +5,21 @@ An app that turns your phone into a portable hardware-backed key store, similar 
 > [!TIP]
 > Curious about my AI coding setup? Reach out to me on [Linkedin](https://www.linkedin.com/in/bartmr/)
 
-> [!WARNING]
-> Project is still not functioning. This repository just holds the progress so far.
+## Install
+
+**Prerequisites**:
+- Android SDK
+- Android device with debugging enabled and authorized (`Settings / Developer Options`)
+
+```bash
+cd android-app
+./gradlew installProdRelease
+```
+
+## API
+
+[API](./android-app/docs/api.md)
+
+## Examples and utilities
+
+- [SSH Agent](./examples/ssh-agent/README.md)
