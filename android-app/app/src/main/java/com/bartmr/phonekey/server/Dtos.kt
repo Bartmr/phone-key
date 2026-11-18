@@ -25,7 +25,6 @@ data class KeyEntryResponse(
 
 @Serializable
 data class SignRequest(
-    val keyId: String,
     val data: String,
 )
 

@@ -87,8 +87,8 @@ class PhoneKeyServer(
                 json(Json { ignoreUnknownKeys = true })
             }
             routing {
-                get("/list-keys") { handleListKeys(call) }
-                post("/sign") { handleSign(call) }
+                get("/keys") { handleListKeys(call) }
+                post("/keys/{id}/sign") { handleSign(call) }
             }
         }
 
@@ -130,7 +130,7 @@ class PhoneKeyServer(
             call.respond(ListKeysResponse(keys = keys))
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "list-keys failed", e)
+            Log.e(TAG, "list keys failed", e)
             call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad-request"))
         } finally {
             commandMutex.unlock()
@@ -144,19 +144,25 @@ class PhoneKeyServer(
         }
 
         try {
+            val keyId = call.parameters["id"]
+            if (keyId.isNullOrBlank()) {
+                call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad-request"))
+                return
+            }
+
             val request = call.receive<SignRequest>()
 
             val entry = withContext(Dispatchers.IO) {
-                repository.getPrivateKeyEntry(request.keyId)
+                repository.getPrivateKeyEntry(keyId)
             }
             if (entry == null) {
-                Log.e(TAG, "Key not found: ${request.keyId}")
+                Log.e(TAG, "Key not found: $keyId")
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse("unknown-error"))
                 return
             }
 
             val storedKey = withContext(Dispatchers.IO) {
-                repository.getStoredKey(request.keyId)
+                repository.getStoredKey(keyId)
             }
             val algorithm = KeystoreSigner.deriveAlgorithm(storedKey)
             val data = Base64.decode(request.data, Base64.DEFAULT)
@@ -175,7 +181,7 @@ class PhoneKeyServer(
                 }
 
                 is SignResult.Error -> {
-                    Log.e(TAG, "Signing failed for '${request.keyId}': ${result.message}")
+                    Log.e(TAG, "Signing failed for '$keyId': ${result.message}")
                     call.respond(
                         HttpStatusCode.InternalServerError,
                         ErrorResponse("unknown-error"),

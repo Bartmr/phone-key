@@ -26,12 +26,12 @@ http://127.0.0.1:<port>
 adb forward tcp:8765 tcp:8765
 
 # List keys
-curl -sS -X GET http://127.0.0.1:8765/list-keys
+curl -sS -X GET http://127.0.0.1:8765/keys
 
 # Sign "hello" with a key
-curl -sS -X POST http://127.0.0.1:8765/sign \
+curl -sS -X POST http://127.0.0.1:8765/keys/<id>/sign \
   -H 'Content-Type: application/json' \
-  -d '{"keyId":"<id>","data":"aGVsbG8="}'
+  -d '{"data":"aGVsbG8="}'
 ```
 
 A complete client implementation is available in
@@ -41,7 +41,7 @@ A complete client implementation is available in
 
 - A signing request may wait for user authentication. Allow at least a couple of minutes.
 
-## `GET /list-keys`
+## `GET /keys`
 
 Returns every key present in the app's Android Keystore, including keys that
 cannot be used for signing.
@@ -51,7 +51,7 @@ cannot be used for signing.
 No body is required and any body is ignored.
 
 ```bash
-curl -sS -X GET http://127.0.0.1:8765/list-keys
+curl -sS -X GET http://127.0.0.1:8765/keys
 ```
 
 ### Response
@@ -65,7 +65,7 @@ interface ListKeysResponse {
 }
 
 interface KeyEntry {
-  /** Stable UUID of the key, used with `/sign`. */
+  /** Stable UUID of the key, used with `/keys/{id}/sign`. */
   id: string;
 
   /** Display name of the key, as shown in the app. */
@@ -86,7 +86,7 @@ interface KeyEntry {
    * - `32` - `WRAP_KEY`
    *
    * For example, `12` means `SIGN` and `VERIFY`. A key is usable with
-   * `/sign` only if it is asymmetric and has the `SIGN` bit set.
+   * `/keys/{id}/sign` only if it is asymmetric and has the `SIGN` bit set.
    */
   purposes: number;
 
@@ -118,18 +118,17 @@ skipped instead of failing the whole request.
 
 ---
 
-## `POST /sign`
+## `POST /keys/{id}/sign`
 
 Signs the supplied bytes with a key stored on the phone. The private key never
 leaves the device.
 
 ### Request
 
+The key is selected by the `{id}` path segment, using an ID from `GET /keys`.
+
 ```ts
 interface SignRequest {
-  /** ID of the key to use, from `/list-keys`. */
-  keyId: string;
-
   /** Raw bytes to sign, Base64-encoded (standard alphabet). */
   data: string;
 }

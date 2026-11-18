@@ -20,7 +20,7 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
-// listKeysResult is the JSON wrapper for a list-keys result.
+// listKeysResult is the JSON wrapper for a list keys result.
 type listKeysResult struct {
 	Keys []keyEntryResult `json:"keys"`
 }
@@ -106,10 +106,10 @@ func (a *PhoneKeyAgent) request(path string, method string, payload any) (int, [
 	return resp.StatusCode, responseBody, nil
 }
 
-// List sends the list-keys command to the phone and returns the
+// List sends the list keys command to the phone and returns the
 // parsed key list.
 func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
-	status, responseBody, err := a.request("/list-keys", http.MethodGet, nil)
+	status, responseBody, err := a.request("/keys", http.MethodGet, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list keys: %w", err)
 	}
@@ -121,11 +121,11 @@ func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
 		)
 	}
 
-	fmt.Fprintf(os.Stderr, "[ssh-agent] raw list-keys response: %s\n", string(responseBody))
+	fmt.Fprintf(os.Stderr, "[ssh-agent] raw list keys response: %s\n", string(responseBody))
 
 	var parsed listKeysResult
 	if err := json.Unmarshal(responseBody, &parsed); err != nil {
-		return nil, fmt.Errorf("failed to decode list-keys response: %w", err)
+		return nil, fmt.Errorf("failed to decode list keys response: %w", err)
 	}
 
 	return a.keysFromEntries(parsed.Keys)
@@ -265,9 +265,8 @@ func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, er
 
 	dataB64 := base64.StdEncoding.EncodeToString(data)
 
-	status, responseBody, err := a.request("/sign", http.MethodPost, map[string]string{
-		"keyId": keyID,
-		"data":  dataB64,
+	status, responseBody, err := a.request("/keys/"+keyID+"/sign", http.MethodPost, map[string]string{
+		"data": dataB64,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("sign request failed: %w", err)
