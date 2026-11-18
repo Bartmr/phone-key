@@ -1,28 +1,40 @@
-package com.bartmr.phonekey.ui.screens.keycreatedetail
+package com.bartmr.phonekey.ui.screens.keycreate
 
 import android.app.KeyguardManager
 import android.content.Context
 import android.security.keystore.KeyProperties
+import android.widget.Toast
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
@@ -38,13 +50,52 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
-import com.bartmr.phonekey.keystore.KeyInfo
-import com.bartmr.phonekey.keystore.KeyStoreRepository
+import androidx.navigation.NavController
 import com.bartmr.phonekey.keystore.BLOCK_MODE_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.DIGEST_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.ENCRYPTION_PADDING_DISPLAY_NAMES
+import com.bartmr.phonekey.keystore.KeyInfo
+import com.bartmr.phonekey.keystore.KeyStoreRepository
 import com.bartmr.phonekey.keystore.PURPOSE_DISPLAY_NAMES
 import com.bartmr.phonekey.keystore.SIGNATURE_PADDING_DISPLAY_NAMES
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun KeyCreateScreen(
+    repository: KeyStoreRepository,
+    navController: NavController,
+) {
+    val context = LocalContext.current
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Create key") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+            )
+        },
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            CreateKeyForm(
+                repository = repository,
+                onKeyCreated = {
+                    Toast.makeText(context, "Key created", Toast.LENGTH_SHORT).show()
+                    navController.popBackStack()
+                },
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

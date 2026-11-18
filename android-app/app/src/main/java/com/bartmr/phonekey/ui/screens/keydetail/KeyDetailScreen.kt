@@ -1,6 +1,5 @@
-package com.bartmr.phonekey.ui.screens.keycreatedetail
+package com.bartmr.phonekey.ui.screens.keydetail
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,7 +31,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -47,27 +45,22 @@ import com.bartmr.phonekey.keystore.SIGNATURE_PADDING_DISPLAY_NAMES
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun KeyCreateDetailScreen(
+fun KeyDetailScreen(
     repository: KeyStoreRepository,
     navController: NavController,
-    alias: String?,
+    alias: String,
 ) {
-    val isCreateMode = alias == null
-    val context = LocalContext.current
-
     var keyInfo by remember { mutableStateOf<KeyInfo?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(alias) {
-        if (!isCreateMode) {
-            keyInfo = repository.getKeyInfo(alias!!)
-        }
+        keyInfo = repository.getKeyInfo(alias)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isCreateMode) "Create key" else alias ?: "Key details") },
+                title = { Text(alias) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -83,32 +76,22 @@ fun KeyCreateDetailScreen(
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            if (isCreateMode) {
-                CreateKeyForm(
-                    repository = repository,
-                    onKeyCreated = {
-                        Toast.makeText(context, "Key created", Toast.LENGTH_SHORT).show()
-                        navController.popBackStack()
-                    },
-                )
-            } else {
-                keyInfo?.let { info ->
-                    KeyDetailView(info = info)
-                    Spacer(Modifier.height(24.dp))
-                    Button(
-                        onClick = { showDeleteDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
-                            disabledContainerColor = ButtonDefaults.buttonColors().disabledContainerColor,
-                            disabledContentColor = ButtonDefaults.buttonColors().disabledContentColor,
-                        ),
-                    ) {
-                        Text("Delete key")
-                    }
-                    Spacer(Modifier.height(24.dp))
+            keyInfo?.let { info ->
+                KeyDetailView(info = info)
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                        disabledContainerColor = ButtonDefaults.buttonColors().disabledContainerColor,
+                        disabledContentColor = ButtonDefaults.buttonColors().disabledContentColor,
+                    ),
+                ) {
+                    Text("Delete key")
                 }
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
@@ -120,7 +103,7 @@ fun KeyCreateDetailScreen(
             text = { Text("Permanently delete \"$alias\" from the Android Keystore?") },
             confirmButton = {
                 TextButton(onClick = {
-                    repository.deleteKey(alias!!)
+                    repository.deleteKey(alias)
                     showDeleteDialog = false
                     navController.popBackStack()
                 }) {

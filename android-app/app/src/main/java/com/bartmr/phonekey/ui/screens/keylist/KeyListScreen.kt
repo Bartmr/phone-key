@@ -75,7 +75,7 @@ fun KeyListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate("key_create_detail") }
+                onClick = { navController.navigate("key_create") }
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Create key")
             }
@@ -114,7 +114,7 @@ fun KeyListScreen(
                     KeyListItem(
                         keyInfo = keyInfo,
                         onClick = {
-                            navController.navigate("key_create_detail?alias=${Uri.encode(keyInfo.alias)}")
+                            navController.navigate("key_detail?alias=${Uri.encode(keyInfo.alias)}")
                         },
                         onDelete = { deleteConfirmAlias = keyInfo.alias },
                     )

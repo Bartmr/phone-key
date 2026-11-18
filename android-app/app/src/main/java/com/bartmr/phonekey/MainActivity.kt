@@ -16,7 +16,8 @@ import com.bartmr.phonekey.server.PhoneKeyServer
 import com.bartmr.phonekey.settings.AppSettings
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
 import com.bartmr.phonekey.ui.screens.keylist.KeyListScreen
-import com.bartmr.phonekey.ui.screens.keycreatedetail.KeyCreateDetailScreen
+import com.bartmr.phonekey.ui.screens.keycreate.KeyCreateScreen
+import com.bartmr.phonekey.ui.screens.keydetail.KeyDetailScreen
 import com.bartmr.phonekey.ui.screens.settings.SettingsScreen
 
 class MainActivity : AppCompatActivity() {
@@ -80,18 +81,22 @@ fun AppNavHost(
                 navController = navController,
             )
         }
+        composable("key_create") {
+            KeyCreateScreen(
+                repository = repository,
+                navController = navController,
+            )
+        }
         composable(
-            route = "key_create_detail?alias={alias}",
+            route = "key_detail?alias={alias}",
             arguments = listOf(
                 navArgument("alias") {
                     type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
                 }
             ),
         ) { backStackEntry ->
-            val alias = backStackEntry.arguments?.getString("alias")
-            KeyCreateDetailScreen(
+            val alias = backStackEntry.arguments?.getString("alias") ?: return@composable
+            KeyDetailScreen(
                 repository = repository,
                 navController = navController,
                 alias = alias,
