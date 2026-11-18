@@ -157,7 +157,7 @@ class PhoneKeyServer(
             }
             if (entry == null) {
                 Log.e(TAG, "Key not found: $keyId")
-                call.respond(HttpStatusCode.InternalServerError, ErrorResponse("unknown-error"))
+                call.respond(HttpStatusCode.NotFound, ErrorResponse("not-found"))
                 return
             }
 
