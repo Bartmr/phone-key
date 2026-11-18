@@ -18,6 +18,7 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
+import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.CancellationException
@@ -86,7 +87,7 @@ class PhoneKeyServer(
                 json(Json { ignoreUnknownKeys = true })
             }
             routing {
-                post("/list-keys") { handleListKeys(call) }
+                get("/list-keys") { handleListKeys(call) }
                 post("/sign") { handleSign(call) }
             }
         }

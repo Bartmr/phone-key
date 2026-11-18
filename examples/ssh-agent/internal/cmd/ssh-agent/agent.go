@@ -107,7 +107,7 @@ func (a *PhoneKeyAgent) request(path string, method string, payload any) (int, [
 // List sends the list-keys command to the phone and returns the
 // parsed key list.
 func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
-	status, responseBody, err := a.request("/list-keys", http.MethodPost, nil)
+	status, responseBody, err := a.request("/list-keys", http.MethodGet, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list keys: %w", err)
 	}
