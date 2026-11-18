@@ -82,20 +82,32 @@ class KeyStoreRepository(context: Context) {
         keysMetadata.edit().remove(alias).apply()
     }
 
-    fun generateKey(info: KeyInfo) {
-        val isSymmetric = info.algorithm == KeyProperties.KEY_ALGORITHM_AES ||
-                info.algorithm == KeyProperties.KEY_ALGORITHM_HMAC_SHA256
+    fun generateKey(spec: CreateKeySpec) {
+        val isSymmetric = spec.algorithm == KeyProperties.KEY_ALGORITHM_AES ||
+                spec.algorithm == KeyProperties.KEY_ALGORITHM_HMAC_SHA256
 
         if (isSymmetric) {
-            val keyGenerator = KeyGenerator.getInstance(info.algorithm, "AndroidKeyStore")
-            keyGenerator.init(info.toAlgorithmParameterSpec())
+            val keyGenerator = KeyGenerator.getInstance(spec.algorithm, "AndroidKeyStore")
+            keyGenerator.init(spec.toAlgorithmParameterSpec())
             keyGenerator.generateKey()
         } else {
-            val keyPairGenerator = KeyPairGenerator.getInstance(info.algorithm, "AndroidKeyStore")
-            keyPairGenerator.initialize(info.toAlgorithmParameterSpec())
+            val keyPairGenerator = KeyPairGenerator.getInstance(spec.algorithm, "AndroidKeyStore")
+            keyPairGenerator.initialize(spec.toAlgorithmParameterSpec())
             keyPairGenerator.generateKeyPair()
         }
 
+        val info = KeyInfo(
+            alias = spec.alias,
+            algorithm = spec.algorithm,
+            keySize = spec.keySize,
+            purposes = spec.purposes,
+            digests = spec.digests,
+            encryptionPaddings = spec.encryptionPaddings,
+            signaturePaddings = spec.signaturePaddings,
+            blockModes = spec.blockModes,
+            userAuthenticationRequired = spec.userAuthenticationRequired,
+            userAuthenticationValidityDurationSeconds = spec.userAuthenticationValidityDurationSeconds,
+        )
         keysMetadata.edit().putString(info.alias, json.encodeToString(KeyInfo.serializer(), info)).apply()
     }
 
