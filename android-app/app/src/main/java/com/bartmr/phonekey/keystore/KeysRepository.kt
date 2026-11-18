@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyProperties
 import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.util.UUID
 import javax.crypto.KeyGenerator
 import kotlinx.serialization.json.Json
 
@@ -16,23 +17,24 @@ class KeysRepository(context: Context) {
         keysMetadata.all.keys.map { getStoredKey(it) }
 
     fun keyExists(alias: String): Boolean =
-        keysMetadata.contains(alias)
+        getAllStoredKeys().any { it.alias == alias }
 
-    fun getPrivateKeyEntry(alias: String): KeyStore.PrivateKeyEntry? =
-        keyStore.getEntry(alias, null) as? KeyStore.PrivateKeyEntry
+    fun getPrivateKeyEntry(id: String): KeyStore.PrivateKeyEntry? =
+        keyStore.getEntry(getStoredKey(id).alias, null) as? KeyStore.PrivateKeyEntry
 
-    fun getPublicKeyDer(alias: String): ByteArray? =
-        getPrivateKeyEntry(alias)?.certificate?.publicKey?.encoded
+    fun getPublicKeyDer(id: String): ByteArray? =
+        getPrivateKeyEntry(id)?.certificate?.publicKey?.encoded
 
-    fun getStoredKey(alias: String): StoredKey {
-        val raw = keysMetadata.getString(alias, null)
-            ?: throw IllegalArgumentException("Key '$alias' not found")
+    fun getStoredKey(id: String): StoredKey {
+        val raw = keysMetadata.getString(id, null)
+            ?: throw IllegalArgumentException("Key '$id' not found")
         return json.decodeFromString(StoredKey.serializer(), raw)
     }
 
-    fun deleteKey(alias: String) {
+    fun deleteKey(id: String) {
+        val alias = getStoredKey(id).alias
         keyStore.deleteEntry(alias)
-        keysMetadata.edit().remove(alias).apply()
+        keysMetadata.edit().remove(id).apply()
     }
 
     fun generateKey(newKeySpec: NewKeySpec) {
@@ -50,6 +52,7 @@ class KeysRepository(context: Context) {
         }
 
         val storedKey = StoredKey(
+            id = UUID.randomUUID().toString(),
             alias = newKeySpec.alias,
             algorithm = newKeySpec.algorithm,
             keySize = newKeySpec.keySize,
@@ -61,7 +64,7 @@ class KeysRepository(context: Context) {
             userAuthenticationRequired = newKeySpec.userAuthenticationRequired,
             userAuthenticationValidityDurationSeconds = newKeySpec.userAuthenticationValidityDurationSeconds,
         )
-        keysMetadata.edit().putString(storedKey.alias, json.encodeToString(StoredKey.serializer(), storedKey)).apply()
+        keysMetadata.edit().putString(storedKey.id, json.encodeToString(StoredKey.serializer(), storedKey)).apply()
     }
 
 }

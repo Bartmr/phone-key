@@ -9,6 +9,7 @@ data class ListKeysResponse(
 
 @Serializable
 data class KeyEntryResponse(
+    val id: String,
     val alias: String,
     val algorithm: String,
     val keySize: Int,
@@ -24,7 +25,7 @@ data class KeyEntryResponse(
 
 @Serializable
 data class SignRequest(
-    val keyAlias: String,
+    val keyId: String,
     val data: String,
 )
 

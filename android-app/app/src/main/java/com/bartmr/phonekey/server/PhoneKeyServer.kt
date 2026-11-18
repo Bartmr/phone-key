@@ -103,6 +103,7 @@ class PhoneKeyServer(
                 repository.getAllStoredKeys().mapNotNull { storedKey ->
                     try {
                         KeyEntryResponse(
+                            id = storedKey.id,
                             alias = storedKey.alias,
                             algorithm = storedKey.algorithm,
                             keySize = storedKey.keySize,
@@ -114,7 +115,7 @@ class PhoneKeyServer(
                             userAuthenticationRequired = storedKey.userAuthenticationRequired,
                             userAuthenticationValidityDurationSeconds =
                                 storedKey.userAuthenticationValidityDurationSeconds,
-                            publicKeyBase64 = repository.getPublicKeyDer(storedKey.alias)?.let {
+                            publicKeyBase64 = repository.getPublicKeyDer(storedKey.id)?.let {
                                 Base64.encodeToString(it, Base64.NO_WRAP)
                             },
                         )
@@ -146,16 +147,16 @@ class PhoneKeyServer(
             val request = call.receive<SignRequest>()
 
             val entry = withContext(Dispatchers.IO) {
-                repository.getPrivateKeyEntry(request.keyAlias)
+                repository.getPrivateKeyEntry(request.keyId)
             }
             if (entry == null) {
-                Log.e(TAG, "Key not found: ${request.keyAlias}")
+                Log.e(TAG, "Key not found: ${request.keyId}")
                 call.respond(HttpStatusCode.InternalServerError, ErrorResponse("unknown-error"))
                 return
             }
 
             val storedKey = withContext(Dispatchers.IO) {
-                repository.getStoredKey(request.keyAlias)
+                repository.getStoredKey(request.keyId)
             }
             val algorithm = KeystoreSigner.deriveAlgorithm(storedKey)
             val data = Base64.decode(request.data, Base64.DEFAULT)
@@ -174,7 +175,7 @@ class PhoneKeyServer(
                 }
 
                 is SignResult.Error -> {
-                    Log.e(TAG, "Signing failed for '${request.keyAlias}': ${result.message}")
+                    Log.e(TAG, "Signing failed for '${request.keyId}': ${result.message}")
                     call.respond(
                         HttpStatusCode.InternalServerError,
                         ErrorResponse("unknown-error"),

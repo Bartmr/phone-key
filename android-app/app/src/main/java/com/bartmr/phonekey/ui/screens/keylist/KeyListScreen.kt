@@ -52,7 +52,7 @@ fun KeyListScreen(
     navController: NavController,
 ) {
     val storedKeys = remember { mutableStateListOf<StoredKey>() }
-    var deleteConfirmAlias by remember { mutableStateOf<String?>(null) }
+    var deleteConfirmKey by remember { mutableStateOf<StoredKey?>(null) }
 
     fun refreshStoredKeys() {
         storedKeys.clear()
@@ -113,31 +113,31 @@ fun KeyListScreen(
                     KeyListItem(
                         storedKey = storedKey,
                         onClick = {
-                            navController.navigate("key_detail?alias=${Uri.encode(storedKey.alias)}")
+                            navController.navigate("key_detail?id=${Uri.encode(storedKey.id)}")
                         },
-                        onDelete = { deleteConfirmAlias = storedKey.alias },
+                        onDelete = { deleteConfirmKey = storedKey },
                     )
                 }
             }
         }
     }
 
-    if (deleteConfirmAlias != null) {
+    deleteConfirmKey?.let { key ->
         AlertDialog(
-            onDismissRequest = { deleteConfirmAlias = null },
+            onDismissRequest = { deleteConfirmKey = null },
             title = { Text("Delete key") },
-            text = { Text("Permanently delete \"${deleteConfirmAlias}\" from the Android Keystore?") },
+            text = { Text("Permanently delete \"${key.alias}\" from the Android Keystore?") },
             confirmButton = {
                 TextButton(onClick = {
-                    repository.deleteKey(deleteConfirmAlias!!)
-                    deleteConfirmAlias = null
+                    repository.deleteKey(key.id)
+                    deleteConfirmKey = null
                     refreshStoredKeys()
                 }) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleteConfirmAlias = null }) {
+                TextButton(onClick = { deleteConfirmKey = null }) {
                     Text("Cancel")
                 }
             },

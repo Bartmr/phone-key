@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class StoredKey(
+    val id: String,
     val alias: String,
     val algorithm: String,
     val keySize: Int,

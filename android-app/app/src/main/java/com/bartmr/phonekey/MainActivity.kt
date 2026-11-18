@@ -88,18 +88,18 @@ fun AppNavHost(
             )
         }
         composable(
-            route = "key_detail?alias={alias}",
+            route = "key_detail?id={id}",
             arguments = listOf(
-                navArgument("alias") {
+                navArgument("id") {
                     type = NavType.StringType
                 }
             ),
         ) { backStackEntry ->
-            val alias = backStackEntry.arguments?.getString("alias") ?: return@composable
+            val id = backStackEntry.arguments?.getString("id") ?: return@composable
             KeyDetailScreen(
                 repository = repository,
                 navController = navController,
-                alias = alias,
+                id = id,
             )
         }
         composable("settings") {

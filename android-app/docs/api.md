@@ -31,7 +31,7 @@ curl -sS -X GET http://127.0.0.1:8765/list-keys
 # Sign "hello" with a key
 curl -sS -X POST http://127.0.0.1:8765/sign \
   -H 'Content-Type: application/json' \
-  -d '{"keyAlias":"my-key","data":"aGVsbG8="}'
+  -d '{"keyId":"<id>","data":"aGVsbG8="}'
 ```
 
 A complete client implementation is available in
@@ -65,6 +65,9 @@ interface ListKeysResponse {
 }
 
 interface KeyEntry {
+  /** Stable UUID of the key, used with `/sign`. */
+  id: string;
+
   /** Keystore alias, as shown in the app. */
   alias: string;
 
@@ -124,8 +127,8 @@ leaves the device.
 
 ```ts
 interface SignRequest {
-  /** Alias of the key to use, from `/list-keys`. */
-  keyAlias: string;
+  /** ID of the key to use, from `/list-keys`. */
+  keyId: string;
 
   /** Raw bytes to sign, Base64-encoded (standard alphabet). */
   data: string;

@@ -48,19 +48,19 @@ import com.bartmr.phonekey.keystore.SIGNATURE_PADDING_DISPLAY_NAMES
 fun KeyDetailScreen(
     repository: KeysRepository,
     navController: NavController,
-    alias: String,
+    id: String,
 ) {
     var storedKey by remember { mutableStateOf<StoredKey?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(alias) {
-        storedKey = repository.getStoredKey(alias)
+    LaunchedEffect(id) {
+        storedKey = repository.getStoredKey(id)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(alias) },
+                title = { Text(storedKey?.alias ?: "") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -100,10 +100,10 @@ fun KeyDetailScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete key") },
-            text = { Text("Permanently delete \"$alias\" from the Android Keystore?") },
+            text = { Text("Permanently delete \"${storedKey?.alias}\" from the Android Keystore?") },
             confirmButton = {
                 TextButton(onClick = {
-                    repository.deleteKey(alias)
+                    repository.deleteKey(id)
                     showDeleteDialog = false
                     navController.popBackStack()
                 }) {
@@ -123,6 +123,7 @@ fun KeyDetailScreen(
 private fun KeyDetailView(storedKey: StoredKey) {
     Spacer(Modifier.height(16.dp))
 
+    DetailRow("ID", storedKey.id)
     DetailRow("Alias", storedKey.alias)
     DetailRow("Algorithm", storedKey.algorithm)
     DetailRow("Key size", "${storedKey.keySize} bits")

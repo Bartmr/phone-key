@@ -27,6 +27,7 @@ type listKeysResult struct {
 
 // keyEntryResult matches the JSON the phone sends for each key.
 type keyEntryResult struct {
+	ID                                 string   `json:"id"`
 	Alias                              string   `json:"alias"`
 	Algorithm                          string   `json:"algorithm"`
 	KeySize                            int      `json:"keySize"`
@@ -58,6 +59,7 @@ type PhoneKeyAgent struct {
 
 type identityEntry struct {
 	key   ssh.PublicKey
+	id    string
 	alias string
 }
 
@@ -190,7 +192,7 @@ func (a *PhoneKeyAgent) keysFromEntries(items []keyEntryResult) ([]*agent.Key, e
 			Comment: item.Alias,
 		})
 
-		entries = append(entries, identityEntry{key: pk, alias: item.Alias})
+		entries = append(entries, identityEntry{key: pk, id: item.ID, alias: item.Alias})
 	}
 
 	a.mu.Lock()
@@ -248,24 +250,24 @@ type ecdsaSig struct {
 // Sign sends a signing request to the phone for the given key and data.
 func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error) {
 	a.mu.Lock()
-	var alias string
+	var keyID string
 	for _, entry := range a.identities {
 		if string(entry.key.Marshal()) == string(key.Marshal()) {
-			alias = entry.alias
+			keyID = entry.id
 			break
 		}
 	}
 	a.mu.Unlock()
 
-	if alias == "" {
+	if keyID == "" {
 		return nil, fmt.Errorf("key not found in cached identities")
 	}
 
 	dataB64 := base64.StdEncoding.EncodeToString(data)
 
 	status, responseBody, err := a.request("/sign", http.MethodPost, map[string]string{
-		"keyAlias": alias,
-		"data":     dataB64,
+		"keyId": keyID,
+		"data":  dataB64,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("sign request failed: %w", err)
