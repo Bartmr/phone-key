@@ -43,9 +43,7 @@ A complete client implementation is available in
 
 ## `GET /keys`
 
-Returns every key present in the app's Android Keystore, including keys that
-cannot be used for signing.
-
+Returns every key present in the app's Android Keystore.
 ### Request
 
 No body is required and any body is ignored.
@@ -136,8 +134,7 @@ interface SignRequest {
 
 If the key was created with `userAuthenticationRequired`, the phone displays a
 biometric/device-credential prompt before signing. The request stays open until
-the user authenticates or cancels. If authentication fails or is cancelled,
-the endpoint returns `500` with `{"error":"unknown-error"}`.
+the user authenticates or cancels.
 
 If `userAuthenticationValidityDurationSeconds` is greater than `0`, a recent
 successful authentication may be reused for that many seconds.
