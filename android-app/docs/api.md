@@ -127,4 +127,10 @@ The response body is the raw signature bytes, sent as
 
 If the user denies the request, the server replies with a `403`.
 
+If the key requires user authentication but the secure lock screen has been
+removed, the key is permanently invalidated by Android and the server replies
+with a `410`.
+
+The key cannot be used again and must be deleted and recreated.
+
 If another command is in progress, the server will reply with a `409`.

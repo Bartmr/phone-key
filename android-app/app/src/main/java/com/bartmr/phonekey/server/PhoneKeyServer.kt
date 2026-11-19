@@ -169,6 +169,11 @@ class PhoneKeyServer(
                     call.respond(HttpStatusCode.Forbidden)
                 }
 
+                is SignResult.KeyInvalidated -> {
+                    Log.e(TAG, "Key '$keyId' is permanently invalidated")
+                    call.respond(HttpStatusCode.Gone)
+                }
+
                 is SignResult.Error -> {
                     Log.e(TAG, "Signing failed for '$keyId': ${result.message}")
                     call.respond(HttpStatusCode.InternalServerError)

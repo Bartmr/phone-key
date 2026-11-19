@@ -1,5 +1,6 @@
 package com.bartmr.phonekey.keystore
 
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -28,6 +29,8 @@ sealed class SignResult {
     }
 
     data object Denied : SignResult()
+
+    data object KeyInvalidated : SignResult()
 
     data class Error(val code: Int, val message: String) : SignResult()
 }
@@ -59,7 +62,11 @@ class KeystoreSigner(
         }
 
         val signature = Signature.getInstance(algorithm)
-        signature.initSign(privateKey)
+        try {
+            signature.initSign(privateKey)
+        } catch (_: KeyPermanentlyInvalidatedException) {
+            return SignResult.KeyInvalidated
+        }
         val crypto = BiometricPrompt.CryptoObject(signature)
 
         return suspendCancellableCoroutine { continuation ->
@@ -76,10 +83,15 @@ class KeystoreSigner(
                                 "CryptoObject signature is null after successful authentication"
                             )
 
-                        authenticatedSignature.update(data)
-                        continuation.resume(
-                            SignResult.Success(authenticatedSignature.sign())
-                        )
+                        val signatureBytes = try {
+                            authenticatedSignature.update(data)
+                            authenticatedSignature.sign()
+                        } catch (_: KeyPermanentlyInvalidatedException) {
+                            continuation.resume(SignResult.KeyInvalidated)
+                            return
+                        }
+
+                        continuation.resume(SignResult.Success(signatureBytes))
                     }
 
                     override fun onAuthenticationError(
