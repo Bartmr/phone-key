@@ -96,7 +96,7 @@ fun KeyListScreen(
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "No keys in Keystore",
+                        "No keys",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
