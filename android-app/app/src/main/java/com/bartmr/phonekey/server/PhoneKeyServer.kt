@@ -7,6 +7,7 @@ import com.bartmr.phonekey.keystore.KeysRepository
 import com.bartmr.phonekey.keystore.KeystoreSigner
 import com.bartmr.phonekey.keystore.SignResult
 import com.bartmr.phonekey.settings.AppSettings
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.ApplicationCall
@@ -18,6 +19,7 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
@@ -139,25 +141,25 @@ class PhoneKeyServer(
 
     private suspend fun handleSign(call: ApplicationCall) {
         if (!commandMutex.tryLock()) {
-            call.respond(HttpStatusCode.Conflict, ErrorResponse("busy"))
+            call.respond(HttpStatusCode.Conflict)
             return
         }
 
         try {
             val keyId = call.parameters["id"]
             if (keyId.isNullOrBlank()) {
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad-request"))
+                call.respond(HttpStatusCode.BadRequest)
                 return
             }
 
-            val request = call.receive<SignRequest>()
+            val data = call.receive<ByteArray>()
 
             val entry = withContext(Dispatchers.IO) {
                 repository.getPrivateKeyEntry(keyId)
             }
             if (entry == null) {
                 Log.e(TAG, "Key not found: $keyId")
-                call.respond(HttpStatusCode.NotFound, ErrorResponse("not-found"))
+                call.respond(HttpStatusCode.NotFound)
                 return
             }
 
@@ -165,7 +167,6 @@ class PhoneKeyServer(
                 repository.getStoredKey(keyId)
             }
             val algorithm = KeystoreSigner.deriveAlgorithm(storedKey)
-            val data = Base64.decode(request.data, Base64.DEFAULT)
 
             val result = withContext(Dispatchers.Main) {
                 signer.sign(entry.privateKey, data, algorithm, storedKey, activity)
@@ -173,25 +174,18 @@ class PhoneKeyServer(
 
             when (result) {
                 is SignResult.Success -> {
-                    call.respond(
-                        SignResponse(
-                            signature = Base64.encodeToString(result.signature, Base64.NO_WRAP),
-                        )
-                    )
+                    call.respondBytes(result.signature, ContentType.Application.OctetStream)
                 }
 
                 is SignResult.Error -> {
                     Log.e(TAG, "Signing failed for '$keyId': ${result.message}")
-                    call.respond(
-                        HttpStatusCode.InternalServerError,
-                        ErrorResponse("unknown-error"),
-                    )
+                    call.respond(HttpStatusCode.InternalServerError)
                 }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "sign failed", e)
-            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("unknown-error"))
+            call.respond(HttpStatusCode.InternalServerError)
         } finally {
             commandMutex.unlock()
         }

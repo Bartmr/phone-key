@@ -30,8 +30,8 @@ curl -sS -X GET http://127.0.0.1:8765/keys
 
 # Sign "hello" with a key
 curl -sS -X POST http://127.0.0.1:8765/keys/<id>/sign \
-  -H 'Content-Type: application/json' \
-  -d '{"data":"aGVsbG8="}'
+  -H 'Content-Type: application/octet-stream' \
+  --data-binary 'hello'
 ```
 
 A complete client implementation is available in
@@ -44,6 +44,7 @@ A complete client implementation is available in
 ## `GET /keys`
 
 Returns every key present in the app's Android Keystore.
+
 ### Request
 
 No body is required and any body is ignored.
@@ -111,9 +112,6 @@ interface KeyEntry {
 }
 ```
 
-Keys that cannot be read (for example, an entry with an unsupported type) are
-skipped instead of failing the whole request.
-
 ---
 
 ## `POST /keys/{id}/sign`
@@ -125,12 +123,7 @@ leaves the device.
 
 The key is selected by the `{id}` path segment, using an ID from `GET /keys`.
 
-```ts
-interface SignRequest {
-  /** Raw bytes to sign, Base64-encoded (standard alphabet). */
-  data: string;
-}
-```
+The request body is the raw bytes to sign, sent as `application/octet-stream`.
 
 If the key was created with `userAuthenticationRequired`, the phone displays a
 biometric/device-credential prompt before signing. The request stays open until
@@ -143,17 +136,7 @@ successful authentication may be reused for that many seconds.
 
 `200 OK`
 
-```ts
-interface SignResponse {
-  /** Signature bytes, Base64-encoded (standard alphabet). */
-  signature: string;
-}
-```
+The response body is the raw signature bytes, sent as
+`application/octet-stream`.
 
-If another command is in progress, the server will reply with a `409` and the following body:
-
-```json
-{
-  "error": "busy"
-}
-```
+If another command is in progress, the server will reply with a `409`.

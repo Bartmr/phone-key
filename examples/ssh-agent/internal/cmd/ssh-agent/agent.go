@@ -44,11 +44,6 @@ type keyEntryResult struct {
 // Android KeyProperties.PURPOSE_SIGN = 4
 const purposeSign = 4
 
-// signResult is the JSON result for a successful sign command.
-type signResult struct {
-	Signature string `json:"signature"`
-}
-
 // PhoneKeyAgent implements the golang.org/x/crypto/ssh/agent.Agent interface
 // by proxying requests to the phone over the local network.
 type PhoneKeyAgent struct {
@@ -70,15 +65,14 @@ func NewAgent(port int) *PhoneKeyAgent {
 	}
 }
 
-// sends a request to the given phone endpoint and returns the
-// response status code and body.
-func (a *PhoneKeyAgent) request(path string, method string, contentType string, payload []byte) (int, []byte, error) {
-	var body io.Reader
-	if payload != nil {
-		body = bytes.NewReader(payload)
+// sends a request to the given phone endpoint and returns the response status code and body.
+func (a *PhoneKeyAgent) request(path string, method string, contentType string, body []byte) (int, []byte, error) {
+	var reqBody io.Reader
+	if body != nil {
+		reqBody = bytes.NewReader(body)
 	}
 
-	req, err := http.NewRequest(method, a.serverURL+path, body)
+	req, err := http.NewRequest(method, a.serverURL+path, reqBody)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -258,43 +252,20 @@ func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, er
 		return nil, fmt.Errorf("key not found in cached identities")
 	}
 
-	dataB64 := base64.StdEncoding.EncodeToString(data)
-
-	payload, err := json.Marshal(map[string]string{
-		"data": dataB64,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal sign request: %w", err)
-	}
-
-	status, responseBody, err := a.request("/keys/"+keyID+"/sign", http.MethodPost, "application/json", payload)
+	status, responseBody, err := a.request("/keys/"+keyID+"/sign", http.MethodPost, "application/octet-stream", data)
 	if err != nil {
 		return nil, fmt.Errorf("sign request failed: %w", err)
 	}
 	if status < http.StatusOK || status >= http.StatusMultipleChoices {
-		return nil, fmt.Errorf(
-			"phone returned HTTP %d: %s",
-			status,
-			strings.TrimSpace(string(responseBody)),
-		)
+		return nil, fmt.Errorf("phone returned HTTP %d", status)
 	}
 
-	var signResp signResult
-	if err := json.Unmarshal(responseBody, &signResp); err != nil {
-		return nil, fmt.Errorf("failed to decode sign response: %w", err)
-	}
-
-	return a.buildSignature(key, signResp.Signature)
+	return a.buildSignature(key, responseBody)
 }
 
-// buildSignature decodes a base64-encoded signature from the phone and converts
-// it into an SSH signature blob.
-func (a *PhoneKeyAgent) buildSignature(key ssh.PublicKey, signatureB64 string) (*ssh.Signature, error) {
-	signatureBytes, err := base64.StdEncoding.DecodeString(signatureB64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode signature base64: %w", err)
-	}
-
+// buildSignature converts a DER-encoded signature from the phone into an SSH
+// signature blob.
+func (a *PhoneKeyAgent) buildSignature(key ssh.PublicKey, signatureBytes []byte) (*ssh.Signature, error) {
 	keyType := key.Type()
 	var blob []byte
 

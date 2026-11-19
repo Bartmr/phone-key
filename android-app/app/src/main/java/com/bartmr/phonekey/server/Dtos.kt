@@ -24,16 +24,6 @@ data class KeyEntryResponse(
 )
 
 @Serializable
-data class SignRequest(
-    val data: String,
-)
-
-@Serializable
-data class SignResponse(
-    val signature: String,
-)
-
-@Serializable
 data class ErrorResponse(
     val error: String,
 )
