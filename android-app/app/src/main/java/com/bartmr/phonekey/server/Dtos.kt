@@ -18,8 +18,6 @@ data class KeyEntryResponse(
     val signaturePaddings: List<String>,
     val encryptionPaddings: List<String>,
     val blockModes: List<String>,
-    val userAuthenticationRequired: Boolean,
-    val userAuthenticationValidityDurationSeconds: Int,
     val publicKeyBase64: String?,
 )
 

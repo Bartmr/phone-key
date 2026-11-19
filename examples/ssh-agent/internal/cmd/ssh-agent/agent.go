@@ -27,18 +27,16 @@ type listKeysResult struct {
 
 // keyEntryResult matches the JSON the phone sends for each key.
 type keyEntryResult struct {
-	ID                                 string   `json:"id"`
-	Name                               string   `json:"name"`
-	Algorithm                          string   `json:"algorithm"`
-	KeySize                            int      `json:"keySize"`
-	Purposes                           int      `json:"purposes"`
-	Digests                            []string `json:"digests"`
-	SignaturePaddings                  []string `json:"signaturePaddings"`
-	EncryptionPaddings                 []string `json:"encryptionPaddings"`
-	BlockModes                         []string `json:"blockModes"`
-	UserAuthenticationRequired         bool     `json:"userAuthenticationRequired"`
-	UserAuthenticationValidityDuration int      `json:"userAuthenticationValidityDurationSeconds"`
-	PublicKeyBase64                    *string  `json:"publicKeyBase64"`
+	ID                 string   `json:"id"`
+	Name               string   `json:"name"`
+	Algorithm          string   `json:"algorithm"`
+	KeySize            int      `json:"keySize"`
+	Purposes           int      `json:"purposes"`
+	Digests            []string `json:"digests"`
+	SignaturePaddings  []string `json:"signaturePaddings"`
+	EncryptionPaddings []string `json:"encryptionPaddings"`
+	BlockModes         []string `json:"blockModes"`
+	PublicKeyBase64    *string  `json:"publicKeyBase64"`
 }
 
 // Android KeyProperties.PURPOSE_SIGN = 4

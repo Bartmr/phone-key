@@ -19,6 +19,8 @@ Open the Phone Key app and keep it in the foreground. The HTTP server starts
 automatically and listens on `127.0.0.1:8765` by default. The port can be
 changed in the app settings.
 
+Every signing request waits for you to approve it on the phone.
+
 ### 2. Build and run the agent
 
 ```bash

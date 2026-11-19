@@ -113,9 +113,6 @@ class PhoneKeyServer(
                         signaturePaddings = storedKey.signaturePaddings,
                         encryptionPaddings = storedKey.encryptionPaddings,
                         blockModes = storedKey.blockModes,
-                        userAuthenticationRequired = storedKey.userAuthenticationRequired,
-                        userAuthenticationValidityDurationSeconds =
-                            storedKey.userAuthenticationValidityDurationSeconds,
                         publicKeyBase64 = repository.getPublicKeyDer(storedKey.id)?.let {
                             Base64.encodeToString(it, Base64.NO_WRAP)
                         },
@@ -165,6 +162,11 @@ class PhoneKeyServer(
             when (result) {
                 is SignResult.Success -> {
                     call.respondBytes(result.signature, ContentType.Application.OctetStream)
+                }
+
+                is SignResult.Denied -> {
+                    Log.i(TAG, "Signing denied by user for '$keyId'")
+                    call.respond(HttpStatusCode.Forbidden)
                 }
 
                 is SignResult.Error -> {

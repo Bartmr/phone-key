@@ -39,8 +39,6 @@ A complete client implementation is available in
 
 ## Endpoints
 
-- A signing request may wait for user authentication. Allow at least a couple of minutes.
-
 ## `GET /keys`
 
 Returns every key present in the app's Android Keystore.
@@ -101,12 +99,6 @@ interface KeyEntry {
   /** Allowed block modes: `ECB`, `CBC`, `CTR`, `GCM`. */
   blockModes: string[];
 
-  /** Whether signing requires the user to authenticate. */
-  userAuthenticationRequired: boolean;
-
-  /** How long an authentication remains valid. `0` means authenticate on every use. */
-  userAuthenticationValidityDurationSeconds: number;
-
   /** DER-encoded X.509 `SubjectPublicKeyInfo`, Base64. `null` for symmetric keys. */
   publicKeyBase64: string | null;
 }
@@ -125,18 +117,14 @@ The key is selected by the `{id}` path segment, using an ID from `GET /keys`.
 
 The request body is the raw bytes to sign, sent as `application/octet-stream`.
 
-If the key was created with `userAuthenticationRequired`, the phone displays a
-biometric/device-credential prompt before signing. The request stays open until
-the user authenticates or cancels.
-
-If `userAuthenticationValidityDurationSeconds` is greater than `0`, a recent
-successful authentication may be reused for that many seconds.
-
+A signing request requires the user to approve it. Allow at least a couple of minutes until timeout.
 ### Response
 
 `200 OK`
 
 The response body is the raw signature bytes, sent as
 `application/octet-stream`.
+
+If the user denies the request, the server replies with a `403`.
 
 If another command is in progress, the server will reply with a `409`.

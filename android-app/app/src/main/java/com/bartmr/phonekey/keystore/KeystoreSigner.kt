@@ -27,10 +27,14 @@ sealed class SignResult {
         }
     }
 
+    data object Denied : SignResult()
+
     data class Error(val code: Int, val message: String) : SignResult()
 }
 
-class KeystoreSigner {
+class KeystoreSigner(
+    private val userPresence: UserPresence = UserPresence(),
+) {
 
     fun getPublicKeyBytes(entry: KeyStore.PrivateKeyEntry): ByteArray {
         return entry.certificate.publicKey.encoded
@@ -44,6 +48,10 @@ class KeystoreSigner {
         activity: FragmentActivity,
     ): SignResult {
         if (!storedKey.userAuthenticationRequired) {
+            if (!userPresence.requestApproval(activity, storedKey)) {
+                return SignResult.Denied
+            }
+
             val signature = Signature.getInstance(algorithm)
             signature.initSign(privateKey)
             signature.update(data)
