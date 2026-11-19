@@ -68,13 +68,8 @@ class PhoneKeyServer(
             stop()
         }
 
-        return try {
             start()
-            true
-        } catch (e: BindException) {
-            Log.e(TAG, "Failed to start server on port $port", e)
-            false
-        }
+        return true
     }
 
     private fun createServer(
