@@ -534,9 +534,3 @@ private fun DropdownSelector(
         }
     }
 }
-
-private tailrec fun Context.findLifecycleOwner(): LifecycleOwner? = when (this) {
-    is LifecycleOwner -> this
-    is ContextWrapper -> baseContext.findLifecycleOwner()
-    else -> null
-}
