@@ -70,25 +70,20 @@ func NewAgent(port int) *PhoneKeyAgent {
 	}
 }
 
-// request sends a JSON payload to the given phone endpoint and returns the
-// response status code and body. Callers are responsible for checking the
-// status code.
-func (a *PhoneKeyAgent) request(path string, method string, payload any) (int, []byte, error) {
+// sends a request to the given phone endpoint and returns the
+// response status code and body.
+func (a *PhoneKeyAgent) request(path string, method string, contentType string, payload []byte) (int, []byte, error) {
 	var body io.Reader
 	if payload != nil {
-		data, err := json.Marshal(payload)
-		if err != nil {
-			return 0, nil, fmt.Errorf("failed to marshal request: %w", err)
-		}
-		body = bytes.NewReader(data)
+		body = bytes.NewReader(payload)
 	}
 
 	req, err := http.NewRequest(method, a.serverURL+path, body)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	if payload != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 
 	client := &http.Client{Timeout: 2 * time.Minute}
@@ -109,7 +104,7 @@ func (a *PhoneKeyAgent) request(path string, method string, payload any) (int, [
 // List sends the list keys command to the phone and returns the
 // parsed key list.
 func (a *PhoneKeyAgent) List() ([]*agent.Key, error) {
-	status, responseBody, err := a.request("/keys", http.MethodGet, nil)
+	status, responseBody, err := a.request("/keys", http.MethodGet, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list keys: %w", err)
 	}
@@ -265,9 +260,14 @@ func (a *PhoneKeyAgent) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, er
 
 	dataB64 := base64.StdEncoding.EncodeToString(data)
 
-	status, responseBody, err := a.request("/keys/"+keyID+"/sign", http.MethodPost, map[string]string{
+	payload, err := json.Marshal(map[string]string{
 		"data": dataB64,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal sign request: %w", err)
+	}
+
+	status, responseBody, err := a.request("/keys/"+keyID+"/sign", http.MethodPost, "application/json", payload)
 	if err != nil {
 		return nil, fmt.Errorf("sign request failed: %w", err)
 	}
