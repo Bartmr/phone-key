@@ -23,7 +23,7 @@ import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
-import kotlinx.coroutines.CancellationException
+import java.net.BindException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -71,7 +71,7 @@ class PhoneKeyServer(
         return try {
             start()
             true
-        } catch (e: Exception) {
+        } catch (e: BindException) {
             Log.e(TAG, "Failed to start server on port $port", e)
             false
         }
@@ -102,38 +102,28 @@ class PhoneKeyServer(
 
         try {
             val keys = withContext(Dispatchers.IO) {
-                repository.getAllStoredKeys().mapNotNull { storedKey ->
-                    try {
-                        KeyEntryResponse(
-                            id = storedKey.id,
-                            name = storedKey.name,
-                            algorithm = storedKey.algorithm,
-                            keySize = storedKey.keySize,
-                            purposes = storedKey.purposes,
-                            digests = storedKey.digests,
-                            signaturePaddings = storedKey.signaturePaddings,
-                            encryptionPaddings = storedKey.encryptionPaddings,
-                            blockModes = storedKey.blockModes,
-                            userAuthenticationRequired = storedKey.userAuthenticationRequired,
-                            userAuthenticationValidityDurationSeconds =
-                                storedKey.userAuthenticationValidityDurationSeconds,
-                            publicKeyBase64 = repository.getPublicKeyDer(storedKey.id)?.let {
-                                Base64.encodeToString(it, Base64.NO_WRAP)
-                            },
-                        )
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.e(TAG, "Failed to read key '${storedKey.name}'", e)
-                        null
-                    }
+                repository.getAllStoredKeys().map { storedKey ->
+                    KeyEntryResponse(
+                        id = storedKey.id,
+                        name = storedKey.name,
+                        algorithm = storedKey.algorithm,
+                        keySize = storedKey.keySize,
+                        purposes = storedKey.purposes,
+                        digests = storedKey.digests,
+                        signaturePaddings = storedKey.signaturePaddings,
+                        encryptionPaddings = storedKey.encryptionPaddings,
+                        blockModes = storedKey.blockModes,
+                        userAuthenticationRequired = storedKey.userAuthenticationRequired,
+                        userAuthenticationValidityDurationSeconds =
+                            storedKey.userAuthenticationValidityDurationSeconds,
+                        publicKeyBase64 = repository.getPublicKeyDer(storedKey.id)?.let {
+                            Base64.encodeToString(it, Base64.NO_WRAP)
+                        },
+                    )
                 }
             }
 
             call.respond(ListKeysResponse(keys = keys))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e(TAG, "list keys failed", e)
-            call.respond(HttpStatusCode.BadRequest, ErrorResponse("bad-request"))
         } finally {
             commandMutex.unlock()
         }
@@ -182,10 +172,6 @@ class PhoneKeyServer(
                     call.respond(HttpStatusCode.InternalServerError)
                 }
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e(TAG, "sign failed", e)
-            call.respond(HttpStatusCode.InternalServerError)
         } finally {
             commandMutex.unlock()
         }

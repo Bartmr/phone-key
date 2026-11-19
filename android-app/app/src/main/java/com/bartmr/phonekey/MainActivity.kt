@@ -1,7 +1,6 @@
 package com.bartmr.phonekey
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -46,19 +45,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        try {
-            httpServer.start()
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Failed to start HTTP server", e)
-        }
+        httpServer.start()
     }
 
     override fun onStop() {
-        try {
-            httpServer.stop()
-        } catch (e: Exception) {
-            Log.e("MainActivity", "Failed to stop HTTP server", e)
-        }
+        httpServer.stop()
         super.onStop()
     }
 }
@@ -95,7 +86,9 @@ fun AppNavHost(
                 }
             ),
         ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("id") ?: return@composable
+            val id = requireNotNull(backStackEntry.arguments?.getString("id")) {
+                "key_detail route is missing the required 'id' argument"
+            }
             KeyDetailScreen(
                 repository = repository,
                 navController = navController,

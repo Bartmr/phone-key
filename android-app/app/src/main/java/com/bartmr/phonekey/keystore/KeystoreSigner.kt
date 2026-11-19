@@ -103,13 +103,19 @@ class KeystoreSigner {
 
     companion object {
         fun deriveAlgorithm(storedKey: StoredKey): String {
-            val digest = storedKey.digests.firstOrNull() ?: KeyProperties.DIGEST_SHA256
-            val digestSuffix = digest.replace("-", "")
-            val keyAlgorithm = when (storedKey.algorithm) {
-                KeyProperties.KEY_ALGORITHM_EC -> "ECDSA"
+            return when (storedKey.algorithm) {
+                KeyProperties.KEY_ALGORITHM_HMAC_SHA256 -> storedKey.algorithm
+                KeyProperties.KEY_ALGORITHM_EC, KeyProperties.KEY_ALGORITHM_RSA -> {
+                    val digest = storedKey.digests.firstOrNull() ?: KeyProperties.DIGEST_SHA256
+                    val digestSuffix = digest.replace("-", "")
+                    val keyAlgorithm = when (storedKey.algorithm) {
+                        KeyProperties.KEY_ALGORITHM_EC -> "ECDSA"
+                        else -> "RSA"
+                    }
+                    "${digestSuffix}with$keyAlgorithm"
+                }
                 else -> storedKey.algorithm
             }
-            return "${digestSuffix}with$keyAlgorithm"
         }
     }
 }
