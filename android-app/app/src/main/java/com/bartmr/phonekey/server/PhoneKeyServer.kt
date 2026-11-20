@@ -33,7 +33,7 @@ class PhoneKeyServer(
     private val activity: FragmentActivity,
     private val repository: KeysRepository,
     private val settings: AppSettings,
-    private val signer: KeystoreSigner = KeystoreSigner(),
+    private val signer: KeystoreSigner,
 ) {
     private val commandMutex = Mutex()
     private var engine: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null

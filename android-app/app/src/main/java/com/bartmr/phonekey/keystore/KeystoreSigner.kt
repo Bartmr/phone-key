@@ -36,7 +36,7 @@ sealed class SignResult {
 }
 
 class KeystoreSigner(
-    private val userPresence: UserPresence = UserPresence(),
+    private val userPresence: UserPresence,
 ) {
 
     fun getPublicKeyBytes(entry: KeyStore.PrivateKeyEntry): ByteArray {

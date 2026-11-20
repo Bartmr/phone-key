@@ -8,8 +8,10 @@ import java.util.UUID
 import javax.crypto.KeyGenerator
 import kotlinx.serialization.json.Json
 
-class KeysRepository(context: Context) {
-    private val keyStore: KeyStore = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
+class KeysRepository(
+    context: Context,
+    private val keyStore: KeyStore,
+) {
     private val keysMetadata = context.getSharedPreferences("keys", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
 

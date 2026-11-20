@@ -11,6 +11,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bartmr.phonekey.keystore.KeysRepository
+import com.bartmr.phonekey.keystore.KeystoreSigner
+import com.bartmr.phonekey.keystore.UserPresence
 import com.bartmr.phonekey.server.PhoneKeyServer
 import com.bartmr.phonekey.settings.AppSettings
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
@@ -18,6 +20,7 @@ import com.bartmr.phonekey.ui.screens.keylist.KeyListScreen
 import com.bartmr.phonekey.ui.screens.keycreate.KeyCreateScreen
 import com.bartmr.phonekey.ui.screens.keydetail.KeyDetailScreen
 import com.bartmr.phonekey.ui.screens.settings.SettingsScreen
+import java.security.KeyStore
 
 class MainActivity : AppCompatActivity() {
     private lateinit var repository: KeysRepository
@@ -27,9 +30,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        repository = KeysRepository(this)
+        val keyStore = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
+        repository = KeysRepository(this, keyStore)
         settings = AppSettings(this)
-        httpServer = PhoneKeyServer(this, repository, settings)
+        val userPresence = UserPresence()
+        val keystoreSigner = KeystoreSigner(userPresence)
+        httpServer = PhoneKeyServer(this, repository, settings, keystoreSigner)
 
         enableEdgeToEdge()
         setContent {
