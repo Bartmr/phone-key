@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.server
+package com.bartmr.phonekey.httpserver
 
 import android.util.Base64
 import android.util.Log
@@ -23,13 +23,12 @@ import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
-import java.net.BindException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
-class PhoneKeyServer(
+class PhoneKeyHttpServer(
     private val activity: FragmentActivity,
     private val repository: KeysRepository,
     private val settings: AppSettings,

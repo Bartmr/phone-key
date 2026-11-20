@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.server
+package com.bartmr.phonekey.httpserver
 
 import kotlinx.serialization.Serializable
 
