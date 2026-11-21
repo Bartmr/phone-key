@@ -29,10 +29,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 class PhoneKeyHttpServer(
-    private val activity: FragmentActivity,
     private val repository: KeysRepository,
     private val settings: AppSettings,
     private val signer: KeystoreSigner,
+    private val getCurrentActivity: () -> FragmentActivity?,
 ) {
     private val commandMutex = Mutex()
     private var engine: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
@@ -148,6 +148,13 @@ class PhoneKeyHttpServer(
                 repository.getStoredKey(keyId)
             }
             val algorithm = KeystoreSigner.deriveAlgorithm(storedKey)
+
+            val activity = getCurrentActivity()
+                ?: run {
+                    Log.e(TAG, "No foreground activity available to approve signing")
+                    call.respond(HttpStatusCode.ServiceUnavailable)
+                    return
+                }
 
             val result = withContext(Dispatchers.Main) {
                 signer.sign(entry.privateKey, data, algorithm, storedKey, activity)

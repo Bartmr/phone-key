@@ -11,31 +11,21 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bartmr.phonekey.keystore.KeysRepository
-import com.bartmr.phonekey.keystore.KeystoreSigner
-import com.bartmr.phonekey.keystore.UserPresence
-import com.bartmr.phonekey.httpserver.PhoneKeyHttpServer
 import com.bartmr.phonekey.settings.AppSettings
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
 import com.bartmr.phonekey.ui.screens.keylist.KeyListScreen
 import com.bartmr.phonekey.ui.screens.keycreate.KeyCreateScreen
 import com.bartmr.phonekey.ui.screens.keydetail.KeyDetailScreen
 import com.bartmr.phonekey.ui.screens.settings.SettingsScreen
-import java.security.KeyStore
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var repository: KeysRepository
-    private lateinit var settings: AppSettings
-    private lateinit var httpServer: PhoneKeyHttpServer
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val keyStore = KeyStore.getInstance("AndroidKeyStore").also { it.load(null) }
-        repository = KeysRepository(this, keyStore)
-        settings = AppSettings(this)
-        val userPresence = UserPresence()
-        val keystoreSigner = KeystoreSigner(userPresence)
-        httpServer = PhoneKeyHttpServer(this, repository, settings, keystoreSigner)
+        val app = application as PhoneKeyApplication
+        val repository = app.repository
+        val settings = app.settings
+        val httpServer = app.httpServer
 
         enableEdgeToEdge()
         setContent {
@@ -47,16 +37,6 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        httpServer.start()
-    }
-
-    override fun onStop() {
-        httpServer.stop()
-        super.onStop()
     }
 }
 
