@@ -106,7 +106,7 @@ class KeystoreSigner(
             )
 
             val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Sign with key")
+                .setTitle("Sign with key \"${storedKey.name}\"")
                 .setAllowedAuthenticators(
                     BiometricManager.Authenticators.BIOMETRIC_STRONG
                             or BiometricManager.Authenticators.DEVICE_CREDENTIAL
