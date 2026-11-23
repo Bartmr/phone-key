@@ -13,7 +13,7 @@ An app that turns your phone into a portable hardware-backed key store, similar 
 
 ```bash
 cd android-app
-./gradlew installProdRelease
+./gradlew installProdReleaseLocal
 ```
 
 ## API
