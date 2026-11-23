@@ -35,13 +35,14 @@ android {
     }
     flavorDimensions += "environment"
     productFlavors {
-        create("prod") {
-            dimension = "environment"
-        }
         create("dev") {
             dimension = "environment"
+            isDefault = true
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
+        }
+        create("prod") {
+            dimension = "environment"
         }
     }
     compileOptions {
