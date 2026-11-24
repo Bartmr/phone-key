@@ -5,9 +5,9 @@ import android.app.Application
 import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
 import com.bartmr.phonekey.httpserver.PhoneKeyHttpServer
-import com.bartmr.phonekey.keystore.KeystoreSigner
-import com.bartmr.phonekey.keystore.KeysRepository
-import com.bartmr.phonekey.keystore.UserPresence
+import com.bartmr.phonekey.keys.KeystoreSigner
+import com.bartmr.phonekey.keys.KeysRepository
+import com.bartmr.phonekey.keys.UserPresence
 import com.bartmr.phonekey.settings.AppSettings
 import java.lang.ref.WeakReference
 import java.security.KeyStore

@@ -3,9 +3,9 @@ package com.bartmr.phonekey.httpserver
 import android.util.Base64
 import android.util.Log
 import androidx.fragment.app.FragmentActivity
-import com.bartmr.phonekey.keystore.KeysRepository
-import com.bartmr.phonekey.keystore.KeystoreSigner
-import com.bartmr.phonekey.keystore.SignResult
+import com.bartmr.phonekey.keys.KeysRepository
+import com.bartmr.phonekey.keys.KeystoreSigner
+import com.bartmr.phonekey.keys.SignResult
 import com.bartmr.phonekey.settings.AppSettings
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode

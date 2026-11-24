@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.keystore
+package com.bartmr.phonekey.keys
 
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec

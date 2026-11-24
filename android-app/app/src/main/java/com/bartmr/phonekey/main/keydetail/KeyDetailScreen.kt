@@ -34,14 +34,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bartmr.phonekey.keystore.StoredKey
-import com.bartmr.phonekey.keystore.KeysRepository
-import com.bartmr.phonekey.keystore.purposesToDisplayNames
-import com.bartmr.phonekey.keystore.toDisplayNames
-import com.bartmr.phonekey.keystore.BLOCK_MODE_DISPLAY_NAMES
-import com.bartmr.phonekey.keystore.DIGEST_DISPLAY_NAMES
-import com.bartmr.phonekey.keystore.ENCRYPTION_PADDING_DISPLAY_NAMES
-import com.bartmr.phonekey.keystore.SIGNATURE_PADDING_DISPLAY_NAMES
+import com.bartmr.phonekey.keys.StoredKey
+import com.bartmr.phonekey.keys.KeysRepository
+import com.bartmr.phonekey.keys.purposesToDisplayNames
+import com.bartmr.phonekey.keys.toDisplayNames
+import com.bartmr.phonekey.keys.BLOCK_MODE_DISPLAY_NAMES
+import com.bartmr.phonekey.keys.DIGEST_DISPLAY_NAMES
+import com.bartmr.phonekey.keys.ENCRYPTION_PADDING_DISPLAY_NAMES
+import com.bartmr.phonekey.keys.SIGNATURE_PADDING_DISPLAY_NAMES
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.keystore
+package com.bartmr.phonekey.keys
 
 import kotlinx.serialization.Serializable
 

@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.keystore
+package com.bartmr.phonekey.keys
 
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.FragmentActivity

@@ -10,7 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.bartmr.phonekey.keystore.KeysRepository
+import com.bartmr.phonekey.keys.KeysRepository
 import com.bartmr.phonekey.settings.AppSettings
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
 import com.bartmr.phonekey.main.keylist.KeyListScreen
