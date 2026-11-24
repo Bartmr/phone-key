@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.ui.screens.keydetail
+package com.bartmr.phonekey.main.keydetail
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

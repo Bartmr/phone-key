@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.ui.screens.settings
+package com.bartmr.phonekey.main.settings
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
