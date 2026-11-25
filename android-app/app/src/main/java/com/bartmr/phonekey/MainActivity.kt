@@ -13,10 +13,10 @@ import androidx.navigation.navArgument
 import com.bartmr.phonekey.keys.KeysRepository
 import com.bartmr.phonekey.settings.AppSettings
 import com.bartmr.phonekey.ui.theme.PhoneKeyTheme
-import com.bartmr.phonekey.main.keylist.KeyListScreen
-import com.bartmr.phonekey.main.keycreate.KeyCreateScreen
-import com.bartmr.phonekey.main.keydetail.KeyDetailScreen
-import com.bartmr.phonekey.main.settings.SettingsScreen
+import com.bartmr.phonekey.main.KeyListScreen
+import com.bartmr.phonekey.main.KeyCreateScreen
+import com.bartmr.phonekey.main.KeyDetailScreen
+import com.bartmr.phonekey.main.SettingsScreen
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

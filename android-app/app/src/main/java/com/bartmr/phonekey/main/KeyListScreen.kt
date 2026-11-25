@@ -1,4 +1,4 @@
-package com.bartmr.phonekey.main.keylist
+package com.bartmr.phonekey.main
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
